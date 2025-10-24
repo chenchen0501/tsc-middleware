@@ -4,7 +4,7 @@ TSC打印服务 - FastAPI入口
 """
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from printer import print_label, print_qrcode, test_connection
+from printer import print_label, print_qrcode, test_connection, print_batch_labels
 
 app = FastAPI(
     title="TSC-Print-Service",
@@ -32,6 +32,18 @@ class QRCodeJob(BaseModel):
     width: str = Field("100", description="标签宽度(mm)")
     height: str = Field("90", description="标签高度(mm)")
     qr_size: int = Field(8, ge=1, le=10, description="二维码大小(1-10)")
+
+
+class BatchPrintJob(BaseModel):
+    """批量打印任务模型"""
+    ip: str = Field(..., description="打印机IP地址", json_schema_extra={"example": "192.168.1.100"})
+    text_list: list[str] = Field(
+        ..., 
+        description="要打印的文本列表", 
+        json_schema_extra={"example": ["cc测试拆箱物料1_盖子_1_1", "cc测试拆箱物料2_底座_1_2", "cc测试拆箱物料3_配件_1_3"]}
+    )
+    width: str = Field("100", description="标签宽度(mm)")
+    height: str = Field("90", description="标签高度(mm)")
 
 
 class TestConnectionRequest(BaseModel):
@@ -119,6 +131,48 @@ def api_print_qrcode(job: QRCodeJob):
         raise HTTPException(
             status_code=500,
             detail=f"打印失败: {str(e)}"
+        )
+
+
+@app.post("/print/batch")
+def api_print_batch(job: BatchPrintJob):
+    """
+    批量打印标签（每张纸上下两行打印两个标签）
+    
+    - **ip**: 打印机IP地址
+    - **text_list**: 要打印的文本列表，每两个文本打印在一张纸的上下两行
+    - **width**: 标签宽度，单位mm（默认100）
+    - **height**: 标签高度，单位mm（默认90）
+    
+    示例：传入3个文本，会打印2张纸（第1张有2个标签，第2张有1个标签）
+    """
+    try:
+        if not job.text_list:
+            raise HTTPException(
+                status_code=400,
+                detail="文本列表不能为空"
+            )
+        
+        print_batch_labels(
+            ip=job.ip,
+            text_list=job.text_list,
+            width=job.width,
+            height=job.height
+        )
+        
+        # 计算打印张数
+        sheets = (len(job.text_list) + 1) // 2
+        
+        return {
+            "status": "ok",
+            "message": f"成功发送{len(job.text_list)}个标签（共{sheets}张纸）到打印机 {job.ip}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"批量打印失败: {str(e)}"
         )
 
 

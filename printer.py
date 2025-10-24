@@ -8,7 +8,7 @@ from tsclib import TSCPrinter
 def print_label(
     ip: str,
     text: str,
-    barcode: str,
+    barcode: str = "",
     qty: int = 1,
     width: str = "100",
     height: str = "90"
@@ -19,7 +19,7 @@ def print_label(
     Args:
         ip: 打印机IP地址（如：192.168.1.100）
         text: 标签文本
-        barcode: 条形码内容
+        barcode: 条形码内容（可选，默认不打印条码）
         qty: 打印数量
         width: 标签宽度(mm)
         height: 标签高度(mm)
@@ -46,6 +46,55 @@ def print_label(
         
         # 执行打印
         p.send_command(f"PRINT {qty},1")
+    finally:
+        # 确保关闭端口
+        p.close_port()
+
+
+def print_batch_labels(
+    ip: str,
+    text_list: list[str],
+    width: str = "100",
+    height: str = "90"
+):
+    """
+    批量打印标签（10cm×9cm纸张，每张上下两行打印两个标签）
+    
+    Args:
+        ip: 打印机IP地址（如：192.168.1.100）
+        text_list: 要打印的文本列表，如 ["cc测试拆箱物料1_盖子_1_1", "cc测试拆箱物料2_底座_1_2"]
+        width: 标签宽度(mm)，默认100mm（10cm）
+        height: 标签高度(mm)，默认90mm（9cm）
+    """
+    p = TSCPrinter()
+    try:
+        # 打开网络端口
+        p.open_port(f"{ip}:9100")
+        
+        # 每两个文本为一组，打印在一张纸上（上下两行）
+        for i in range(0, len(text_list), 2):
+            # 清除缓冲区
+            p.send_command("CLS")
+            
+            # 设置标签尺寸
+            p.send_command(f"SIZE {width} mm, {height} mm")
+            p.send_command("GAP 2 mm, 0 mm")
+            p.send_command("SPEED 4")
+            p.send_command("DENSITY 10")
+            p.send_command("DIRECTION 1")
+            
+            # 打印第一行（上方）
+            first_text = text_list[i]
+            p.send_command_utf8(f'TEXT 150,150,"5",0,1,1,"{first_text}"')
+            
+            # 打印第二行（下方，如果存在）
+            if i + 1 < len(text_list):
+                second_text = text_list[i + 1]
+                p.send_command_utf8(f'TEXT 150,450,"5",0,1,1,"{second_text}"')
+            
+            # 执行打印一张
+            p.send_command("PRINT 1,1")
+            
     finally:
         # 确保关闭端口
         p.close_port()
