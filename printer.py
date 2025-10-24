@@ -5,6 +5,16 @@ TSC打印机核心模块（跨平台）
 from tsclib import TSCPrinter
 
 
+def _mm_to_dots(value: float) -> int:
+    """将毫米转换为203dpi打印机的像素点位"""
+    return int(round(value * 8))
+
+
+def _sanitize_tspl_text(value: str) -> str:
+    """转义TSPL命令中的双引号，避免截断文本"""
+    return value.replace('"', '""')
+
+
 def print_label(
     ip: str,
     text: str,
@@ -30,19 +40,34 @@ def print_label(
         p.open_port(f"{ip}:9100")
         
         # 使用原始TSPL命令以支持中文
+        label_width_mm = float(width)
+        label_height_mm = float(height)
+        left_margin = _mm_to_dots(5)
+        top_margin = _mm_to_dots(6)
+        barcode_margin_top = _mm_to_dots(18)
+
         p.send_command("CLS")
         p.send_command(f"SIZE {width} mm, {height} mm")
         p.send_command("GAP 2 mm, 0 mm")
         p.send_command("SPEED 4")
         p.send_command("DENSITY 10")
         p.send_command("DIRECTION 1")
-        
-        # 打印文本（使用UTF-8编码支持中文）
-        p.send_command_utf8(f'TEXT 150,30,"5",0,1,1,"{text}"')
+        p.send_command("REFERENCE 0,0")
+        p.send_command("CODEPAGE UTF-8")
+
+        # 打印文本（使用支持中文的内置字体）
+        font_name = "TSS24.BF2"
+        safe_text = _sanitize_tspl_text(text)
+        p.send_command_utf8(
+            f'TEXT {left_margin},{top_margin},"{font_name}",0,1,1,"{safe_text}"'
+        )
         
         # 打印条形码（如果提供）
         if barcode:
-            p.send_command(f'BARCODE 150,150,"128",80,1,0,2,2,"{barcode}"')
+            barcode_y = top_margin + barcode_margin_top
+            p.send_command(
+                f'BARCODE {left_margin},{barcode_y},"128",80,1,0,2,2,"{barcode}"'
+            )
         
         # 执行打印
         p.send_command(f"PRINT {qty},1")
@@ -72,6 +97,14 @@ def print_batch_labels(
         p.open_port(f"{ip}:9100")
         
         # 每两个文本为一组，打印在一张纸上（上下两行）
+        label_width_mm = float(width)
+        label_height_mm = float(height)
+        left_margin = _mm_to_dots(5)
+        top_margin = _mm_to_dots(5)
+        half_height = _mm_to_dots(label_height_mm / 2)
+        second_line_offset = half_height - _mm_to_dots(2)
+        font_name = "TSS24.BF2"
+
         for i in range(0, len(text_list), 2):
             # 清除缓冲区
             p.send_command("CLS")
@@ -82,15 +115,23 @@ def print_batch_labels(
             p.send_command("SPEED 4")
             p.send_command("DENSITY 10")
             p.send_command("DIRECTION 1")
+            p.send_command("REFERENCE 0,0")
+            p.send_command("CODEPAGE UTF-8")
             
             # 打印第一行（上方）
             first_text = text_list[i]
-            p.send_command_utf8(f'TEXT 150,150,"5",0,1,1,"{first_text}"')
+            safe_first = _sanitize_tspl_text(first_text)
+            p.send_command_utf8(
+                f'TEXT {left_margin},{top_margin},"{font_name}",0,1,1,"{safe_first}"'
+            )
             
             # 打印第二行（下方，如果存在）
             if i + 1 < len(text_list):
                 second_text = text_list[i + 1]
-                p.send_command_utf8(f'TEXT 150,450,"5",0,1,1,"{second_text}"')
+                safe_second = _sanitize_tspl_text(second_text)
+                p.send_command_utf8(
+                    f'TEXT {left_margin},{top_margin + second_line_offset},"{font_name}",0,1,1,"{safe_second}"'
+                )
             
             # 执行打印一张
             p.send_command("PRINT 1,1")
