@@ -37,8 +37,8 @@ def print_label(
         p.send_command("DENSITY 10")
         p.send_command("DIRECTION 1")
         
-        # 打印文本（使用UTF-8编码支持中文）
-        p.send_command_utf8(f'TEXT 150,30,"5",0,1,1,"{text}"')
+        # 打印文本（使用UTF-8编码支持中文，字体3支持中文）
+        p.send_command_utf8(f'TEXT 150,30,"3",0,2,2,"{text}"')
         
         # 打印条形码（如果提供）
         if barcode:
@@ -83,14 +83,14 @@ def print_batch_labels(
             p.send_command("DENSITY 10")
             p.send_command("DIRECTION 1")
             
-            # 打印第一行（上方）- 使用和单个打印相同的字体设置
+            # 打印第一行（上方）- 使用字体3支持中文，调整位置往下
             first_text = text_list[i]
-            p.send_command_utf8(f'TEXT 30,80,"5",0,1,1,"{first_text}"')
+            p.send_command_utf8(f'TEXT 30,120,"3",0,2,2,"{first_text}"')
             
             # 打印第二行（下方，如果存在）
             if i + 1 < len(text_list):
                 second_text = text_list[i + 1]
-                p.send_command_utf8(f'TEXT 30,360,"5",0,1,1,"{second_text}"')
+                p.send_command_utf8(f'TEXT 30,400,"3",0,2,2,"{second_text}"')
             
             # 执行打印一张
             p.send_command("PRINT 1,1")

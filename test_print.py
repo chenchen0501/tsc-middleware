@@ -31,7 +31,7 @@ PRINT_CONFIGS = [
     {
         "name": "测试1 - 英文打印",
         "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        "barcode": "JAVALY2024",
+        # "barcode": "JAVALY2024",
         "qty": 1,
         "width": "100",
         "height": "90"
@@ -39,7 +39,7 @@ PRINT_CONFIGS = [
     {
         "name": "测试2 - 中文打印",
         "text": "哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈",
-        "barcode": "CN2024",
+        # "barcode": "CN2024",
         "qty": 1,
         "width": "100",
         "height": "90"
@@ -47,7 +47,7 @@ PRINT_CONFIGS = [
     {
         "name": "测试3 - 中英文混合",
         "text": "基本粒子HHHHHHHHHHHHHHHHH",
-        "barcode": "MIX2024",
+        # "barcode": "MIX2024",
         "qty": 1,
         "width": "100",
         "height": "90"
@@ -58,7 +58,6 @@ PRINT_CONFIGS = [
         "text_list": [
             "cc测试拆箱物料1_盖子_1_1",
             "cc测试拆箱物料2_底座_1_2",
-            "cc测试拆箱物料3_配件_1_3"
         ],
         "width": "100",
         "height": "90"
