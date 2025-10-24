@@ -4,36 +4,58 @@
 
 ## 快速开始
 
-### macOS M4 开发环境
+### macOS M 芯片开发环境
 
 ```bash
-# 1. 安装Rosetta和x86_64 Homebrew（仅首次）
-/usr/sbin/softwareupdate --install-rosetta --agree-to-license
-arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# 1. 安装Rosetta（仅首次，M芯片Mac必需）
+softwareupdate --install-rosetta --agree-to-license
 
-# 2. 安装mono和libgdiplus
-arch -x86_64 /usr/local/bin/brew install mono libgdiplus
+# 2. 安装mono和mono-libgdiplus
+brew install mono mono-libgdiplus
 
 # 3. 创建Python虚拟环境
 python3 -m venv venv
 source venv/bin/activate
-pip install -U pip wheel
+pip install -U pip
 
 # 4. 安装依赖
 pip install -r requirements.txt
 
-# 5. 验证安装
+# 5. 设置环境变量并验证
+export MONO_GAC_PREFIX="/opt/homebrew"
+export DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"
+export PYTHONNET_RUNTIME=mono
 python -c "from tsclib import TSCPrinter; print('✅ TSCLib加载成功')"
 ```
 
 ### 启动服务
 
+**macOS（使用启动脚本）:**
+
 ```bash
+./start.sh
+```
+
+**或手动启动:**
+
+```bash
+# 设置环境变量
+export MONO_GAC_PREFIX="/opt/homebrew"
+export DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"
+export PYTHONNET_RUNTIME=mono
+
+# 激活虚拟环境
+source venv/bin/activate
+
 # 开发模式（支持热重载）
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-# 生产模式
-uvicorn main:app --host 0.0.0.0 --port 8000
+**Windows:**
+
+```cmd
+venv\Scripts\activate
+python main.py
 ```
 
 访问 http://localhost:8000/docs 查看交互式 API 文档
@@ -65,20 +87,6 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ## Windows 部署
 
-### 方式 1：自动安装（推荐）
-
-双击运行 `setup_windows.bat`，脚本会自动：
-
-- 检查 Python 版本（需要 3.10-3.12）
-- 创建虚拟环境
-- 安装所有依赖
-- 验证 TSCLib
-- 提示可能需要的 VC++运行库
-
-安装完成后，双击 `run.bat` 启动服务
-
-### 方式 2：手动安装
-
 ```cmd
 # 1. 创建虚拟环境
 python -m venv venv
@@ -93,34 +101,39 @@ pip install -r requirements.txt
 python main.py
 ```
 
-详见 `开发.md`
-
 ## 打印测试
 
-### 方式 1：使用测试脚本（推荐）
+### 使用测试脚本
 
-**命令提示符 (CMD):**
-```cmd
-test.bat
-```
+**macOS（推荐）:**
 
-**PowerShell:**
-```powershell
-.\test.ps1
-```
-
-**直接运行 (已激活虚拟环境):**
 ```bash
+./test.sh
+```
+
+**手动运行（需先设置环境变量）:**
+
+```bash
+# 设置环境变量
+export MONO_GAC_PREFIX="/opt/homebrew"
+export DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"
+export PYTHONNET_RUNTIME=mono
+
+# 激活虚拟环境
+source venv/bin/activate
+
+# 运行测试
 python test_print.py
 ```
 
 测试脚本支持：
+
 - ✅ 中文打印测试
-- ✅ 英文打印测试  
+- ✅ 英文打印测试
 - ✅ 中英文混合测试
 - ✅ 交互式选择测试项
 
-### 方式 2：编辑测试配置
+### 自定义测试配置
 
 打开 `test_print.py`，修改 `PRINT_CONFIGS` 配置：
 
@@ -149,7 +162,7 @@ PRINT_CONFIGS = [
 
 - **连接失败**: ping 打印机 IP，确保在同一网络
 
-- **中文乱码**: 
-  - 使用 `test.bat` 或 `test.ps1` 启动测试（已自动配置UTF-8编码）
-  - 如果PowerShell仍有乱码，在PowerShell中执行：`$OutputEncoding = [System.Text.Encoding]::UTF8`
+- **中文乱码**:
+  - 确保 Python 环境编码为 UTF-8
+  - Windows 系统建议在 PowerShell 中执行：`$OutputEncoding = [System.Text.Encoding]::UTF8`
   - 确保打印机支持中文字体（推荐使用字体代码 "5" 或 "TSS24.BF2"）
