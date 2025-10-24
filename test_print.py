@@ -4,7 +4,7 @@ TSC打印机测试脚本 - 支持中文打印
 """
 import sys
 import os
-from printer import print_label
+from printer import print_label, print_batch_labels
 
 # Windows编码设置 - 修复中文乱码
 if sys.platform == 'win32':
@@ -52,6 +52,17 @@ PRINT_CONFIGS = [
         "width": "100",
         "height": "90"
     },
+    {
+        "name": "测试4 - 批量打印（上下两行）",
+        "type": "batch",
+        "text_list": [
+            "cc测试拆箱物料1_盖子_1_1",
+            "cc测试拆箱物料2_底座_1_2",
+            "cc测试拆箱物料3_配件_1_3"
+        ],
+        "width": "100",
+        "height": "90"
+    },
 ]
 
 # ========================================
@@ -64,26 +75,53 @@ def run_test(config):
     print(f"🖨️  {config['name']}")
     print(f"{'='*50}")
     print(f"打印机IP: {PRINTER_IP}")
-    print(f"文本内容: {config['text']}")
-    print(f"条形码: {config['barcode']}")
-    print(f"打印数量: {config['qty']}")
-    print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
-    print()
     
-    try:
-        print_label(
-            ip=PRINTER_IP,
-            text=config['text'],
-            barcode=config['barcode'],
-            qty=config['qty'],
-            width=config['width'],
-            height=config['height']
-        )
-        print("✅ [成功] 打印命令已发送")
-        return True
-    except Exception as e:
-        print(f"❌ [失败] {e}")
-        return False
+    # 判断是批量打印还是单个打印
+    if config.get('type') == 'batch':
+        # 批量打印
+        print(f"打印模式: 批量打印（上下两行）")
+        print(f"标签列表:")
+        for i, text in enumerate(config['text_list'], 1):
+            print(f"  {i}. {text}")
+        print(f"标签数量: {len(config['text_list'])} 个")
+        print(f"打印张数: {(len(config['text_list']) + 1) // 2} 张")
+        print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
+        print()
+        
+        try:
+            print_batch_labels(
+                ip=PRINTER_IP,
+                text_list=config['text_list'],
+                width=config['width'],
+                height=config['height']
+            )
+            print("✅ [成功] 批量打印命令已发送")
+            return True
+        except Exception as e:
+            print(f"❌ [失败] {e}")
+            return False
+    else:
+        # 单个打印
+        print(f"文本内容: {config['text']}")
+        print(f"条形码: {config['barcode']}")
+        print(f"打印数量: {config['qty']}")
+        print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
+        print()
+        
+        try:
+            print_label(
+                ip=PRINTER_IP,
+                text=config['text'],
+                barcode=config['barcode'],
+                qty=config['qty'],
+                width=config['width'],
+                height=config['height']
+            )
+            print("✅ [成功] 打印命令已发送")
+            return True
+        except Exception as e:
+            print(f"❌ [失败] {e}")
+            return False
 
 
 def main():
