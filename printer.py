@@ -41,9 +41,9 @@ def print_label(
         
         # 打印文本（使用Windows字体支持中文）
         p.print_text_windows_font(
-            x=150,
-            y=30,
-            font_height=32,
+            x=50,
+            y=200,
+            font_height=56,  # 增大字体
             rotation=0,
             font_style=0,
             font_underline=0,
@@ -97,9 +97,9 @@ def print_batch_labels(
             # 打印第一行（上方）- 使用Windows字体支持中文
             first_text = text_list[i]
             p.print_text_windows_font(
-                x=30,
-                y=120,
-                font_height=32,
+                x=50,
+                y=80,
+                font_height=56,  # 增大字体
                 rotation=0,
                 font_style=0,
                 font_underline=0,
@@ -111,9 +111,9 @@ def print_batch_labels(
             if i + 1 < len(text_list):
                 second_text = text_list[i + 1]
                 p.print_text_windows_font(
-                    x=30,
+                    x=50,
                     y=400,
-                    font_height=32,
+                    font_height=56,  # 增大字体
                     rotation=0,
                     font_style=0,
                     font_underline=0,
