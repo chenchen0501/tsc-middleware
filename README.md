@@ -28,6 +28,22 @@ export PYTHONNET_RUNTIME=mono
 python -c "from tsclib import TSCPrinter; print('✅ TSCLib加载成功')"
 ```
 
+### 配置打印机 IP
+
+**方法 1：修改配置文件（推荐）**
+
+编辑 `config.py` 文件：
+
+```python
+PRINTER_IP = "192.168.1.100"  # 修改为你的打印机IP
+```
+
+**方法 2：使用环境变量**
+
+```bash
+export PRINTER_IP=192.168.1.200
+```
+
 ### 启动服务
 
 **macOS（使用启动脚本）:**
@@ -43,6 +59,9 @@ python -c "from tsclib import TSCPrinter; print('✅ TSCLib加载成功')"
 export MONO_GAC_PREFIX="/opt/homebrew"
 export DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"
 export PYTHONNET_RUNTIME=mono
+
+# （可选）设置打印机IP
+export PRINTER_IP=192.168.1.100
 
 # 激活虚拟环境
 source venv/bin/activate

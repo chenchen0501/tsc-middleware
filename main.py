@@ -5,6 +5,7 @@ TSC打印服务 - FastAPI入口
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from printer import print_label, print_qrcode, test_connection, print_batch_labels
+from config import PRINTER_IP
 
 app = FastAPI(
     title="TSC-Print-Service",
@@ -15,9 +16,9 @@ app = FastAPI(
 
 class PrintJob(BaseModel):
     """打印任务模型"""
-    ip: str = Field(..., description="打印机IP地址", json_schema_extra={"example": "192.168.1.100"})
+    ip: str | None = Field(None, description="打印机IP地址（可选，默认使用配置的IP）", json_schema_extra={"example": "192.168.1.100"})
     text: str = Field(..., description="标签文本", json_schema_extra={"example": "Hello M4"})
-    barcode: str = Field(..., description="条形码内容", json_schema_extra={"example": "1234567890"})
+    barcode: str = Field("", description="条形码内容（可选）", json_schema_extra={"example": "1234567890"})
     qty: int = Field(1, ge=1, le=100, description="打印数量")
     width: str = Field("100", description="标签宽度(mm)")
     height: str = Field("90", description="标签高度(mm)")
@@ -25,7 +26,7 @@ class PrintJob(BaseModel):
 
 class QRCodeJob(BaseModel):
     """二维码打印任务模型"""
-    ip: str = Field(..., description="打印机IP地址", json_schema_extra={"example": "192.168.1.100"})
+    ip: str | None = Field(None, description="打印机IP地址（可选，默认使用配置的IP）", json_schema_extra={"example": "192.168.1.100"})
     content: str = Field(..., description="二维码内容", json_schema_extra={"example": "https://www.example.com"})
     text: str = Field("", description="标签文本（可选）")
     qty: int = Field(1, ge=1, le=100, description="打印数量")
@@ -36,7 +37,7 @@ class QRCodeJob(BaseModel):
 
 class BatchPrintJob(BaseModel):
     """批量打印任务模型"""
-    ip: str = Field(..., description="打印机IP地址", json_schema_extra={"example": "192.168.1.100"})
+    ip: str | None = Field(None, description="打印机IP地址（可选，默认使用配置的IP）", json_schema_extra={"example": "192.168.1.100"})
     text_list: list[str] = Field(
         ..., 
         description="要打印的文本列表", 
@@ -48,7 +49,7 @@ class BatchPrintJob(BaseModel):
 
 class TestConnectionRequest(BaseModel):
     """测试连接请求"""
-    ip: str = Field(..., description="打印机IP地址", json_schema_extra={"example": "192.168.1.100"})
+    ip: str | None = Field(None, description="打印机IP地址（可选，默认使用配置的IP）", json_schema_extra={"example": "192.168.1.100"})
 
 
 @app.get("/")
@@ -73,16 +74,17 @@ def api_print(job: PrintJob):
     """
     打印标签
     
-    - **ip**: 打印机IP地址
+    - **ip**: 打印机IP地址（可选，默认使用配置的IP）
     - **text**: 标签上的文本内容
-    - **barcode**: 条形码数据
+    - **barcode**: 条形码数据（可选）
     - **qty**: 打印数量（1-100）
     - **width**: 标签宽度，单位mm（默认100）
     - **height**: 标签高度，单位mm（默认90）
     """
     try:
+        printer_ip = job.ip or PRINTER_IP
         print_label(
-            ip=job.ip,
+            ip=printer_ip,
             text=job.text,
             barcode=job.barcode,
             qty=job.qty,
@@ -91,7 +93,7 @@ def api_print(job: PrintJob):
         )
         return {
             "status": "ok",
-            "message": f"成功发送{job.qty}张标签到打印机 {job.ip}"
+            "message": f"成功发送{job.qty}张标签到打印机 {printer_ip}"
         }
     except Exception as e:
         raise HTTPException(
@@ -105,7 +107,7 @@ def api_print_qrcode(job: QRCodeJob):
     """
     打印二维码标签
     
-    - **ip**: 打印机IP地址
+    - **ip**: 打印机IP地址（可选，默认使用配置的IP）
     - **content**: 二维码内容（URL或文本）
     - **text**: 标签文本（可选）
     - **qty**: 打印数量（1-100）
@@ -114,8 +116,9 @@ def api_print_qrcode(job: QRCodeJob):
     - **qr_size**: 二维码大小（1-10，默认8）
     """
     try:
+        printer_ip = job.ip or PRINTER_IP
         print_qrcode(
-            ip=job.ip,
+            ip=printer_ip,
             content=job.content,
             text=job.text,
             qty=job.qty,
@@ -125,7 +128,7 @@ def api_print_qrcode(job: QRCodeJob):
         )
         return {
             "status": "ok",
-            "message": f"成功发送{job.qty}张二维码标签到打印机 {job.ip}"
+            "message": f"成功发送{job.qty}张二维码标签到打印机 {printer_ip}"
         }
     except Exception as e:
         raise HTTPException(
@@ -139,7 +142,7 @@ def api_print_batch(job: BatchPrintJob):
     """
     批量打印标签（每张纸上下两行打印两个标签）
     
-    - **ip**: 打印机IP地址
+    - **ip**: 打印机IP地址（可选，默认使用配置的IP）
     - **text_list**: 要打印的文本列表，每两个文本打印在一张纸的上下两行
     - **width**: 标签宽度，单位mm（默认100）
     - **height**: 标签高度，单位mm（默认90）
@@ -153,8 +156,9 @@ def api_print_batch(job: BatchPrintJob):
                 detail="文本列表不能为空"
             )
         
+        printer_ip = job.ip or PRINTER_IP
         print_batch_labels(
-            ip=job.ip,
+            ip=printer_ip,
             text_list=job.text_list,
             width=job.width,
             height=job.height
@@ -165,7 +169,7 @@ def api_print_batch(job: BatchPrintJob):
         
         return {
             "status": "ok",
-            "message": f"成功发送{len(job.text_list)}个标签（共{sheets}张纸）到打印机 {job.ip}"
+            "message": f"成功发送{len(job.text_list)}个标签（共{sheets}张纸）到打印机 {printer_ip}"
         }
     except HTTPException:
         raise
@@ -181,19 +185,20 @@ def api_test_connection(req: TestConnectionRequest):
     """
     测试打印机连接
     
-    - **ip**: 打印机IP地址
+    - **ip**: 打印机IP地址（可选，默认使用配置的IP）
     """
     try:
-        is_connected = test_connection(req.ip)
+        printer_ip = req.ip or PRINTER_IP
+        is_connected = test_connection(printer_ip)
         if is_connected:
             return {
                 "status": "ok",
-                "message": f"打印机 {req.ip} 连接正常"
+                "message": f"打印机 {printer_ip} 连接正常"
             }
         else:
             raise HTTPException(
                 status_code=503,
-                detail=f"无法连接到打印机 {req.ip}"
+                detail=f"无法连接到打印机 {printer_ip}"
             )
     except Exception as e:
         raise HTTPException(
