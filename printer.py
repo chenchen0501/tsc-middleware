@@ -82,17 +82,15 @@ def print_batch_labels(
             p.send_command("SPEED 4")
             p.send_command("DENSITY 10")
             p.send_command("DIRECTION 1")
-            p.send_command("SET TEAR ON")  # 撕纸模式
-            p.send_command("CODEPAGE UTF-8")  # 设置UTF-8编码
             
-            # 打印第一行（上方）- 左上角位置
+            # 打印第一行（上方）- 使用和单个打印相同的字体设置
             first_text = text_list[i]
-            p.send_command_utf8(f'TEXT 30,80,"TSS24.BF2",0,1,1,"{first_text}"')
+            p.send_command_utf8(f'TEXT 30,80,"5",0,1,1,"{first_text}"')
             
             # 打印第二行（下方，如果存在）
             if i + 1 < len(text_list):
                 second_text = text_list[i + 1]
-                p.send_command_utf8(f'TEXT 30,360,"TSS24.BF2",0,1,1,"{second_text}"')
+                p.send_command_utf8(f'TEXT 30,360,"5",0,1,1,"{second_text}"')
             
             # 执行打印一张
             p.send_command("PRINT 1,1")
