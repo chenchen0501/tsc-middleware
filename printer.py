@@ -29,16 +29,27 @@ def print_label(
         # 打开网络端口（9100是TSC默认端口）
         p.open_port(f"{ip}:9100")
         
-        # 使用原始TSPL命令以支持中文
+        # 清除缓冲区
         p.send_command("CLS")
+        
+        # 设置标签尺寸
         p.send_command(f"SIZE {width} mm, {height} mm")
         p.send_command("GAP 2 mm, 0 mm")
         p.send_command("SPEED 4")
         p.send_command("DENSITY 10")
         p.send_command("DIRECTION 1")
         
-        # 打印文本（使用BLOCK命令支持中文）
-        p.send_command_utf8(f'BLOCK 150,30,"3",0,2,2,"{text}"')
+        # 打印文本（使用Windows字体支持中文）
+        p.print_text_windows_font(
+            x=150,
+            y=30,
+            font_height=32,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="宋体",  # 使用宋体支持中文
+            text=text
+        )
         
         # 打印条形码（如果提供）
         if barcode:
@@ -83,14 +94,32 @@ def print_batch_labels(
             p.send_command("DENSITY 10")
             p.send_command("DIRECTION 1")
             
-            # 打印第一行（上方）- 使用BLOCK命令支持中文
+            # 打印第一行（上方）- 使用Windows字体支持中文
             first_text = text_list[i]
-            p.send_command_utf8(f'BLOCK 30,120,"3",0,2,2,"{first_text}"')
+            p.print_text_windows_font(
+                x=30,
+                y=120,
+                font_height=32,
+                rotation=0,
+                font_style=0,
+                font_underline=0,
+                font_face_name="宋体",
+                text=first_text
+            )
             
             # 打印第二行（下方，如果存在）
             if i + 1 < len(text_list):
                 second_text = text_list[i + 1]
-                p.send_command_utf8(f'BLOCK 30,400,"3",0,2,2,"{second_text}"')
+                p.print_text_windows_font(
+                    x=30,
+                    y=400,
+                    font_height=32,
+                    rotation=0,
+                    font_style=0,
+                    font_underline=0,
+                    font_face_name="宋体",
+                    text=second_text
+                )
             
             # 执行打印一张
             p.send_command("PRINT 1,1")
