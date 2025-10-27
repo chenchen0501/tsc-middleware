@@ -43,11 +43,13 @@ def _init_printer_settings(printer: TSCPrinter, width: str, height: str):
     # 设置打印浓度（0-15）
     printer.send_command("DENSITY 12")
     
-    # 设置为撕离模式（打印后自动撕纸位置）
-    printer.send_command("SET TEAR ON")
+    # 关闭撕离模式（避免打印撤回错位）
+    # SET TEAR ON 会导致打印后回退，造成错位问题
+    printer.send_command("SET TEAR OFF")
+    printer.send_command("SET PEEL OFF")
     
-    # 发送自动校准命令（帮助打印机识别纸张位置）
-    # printer.send_command("SELFTEST")  # 这个会打印测试页，注释掉
+    # 设置打印停止位置（0 = 打印后不移动纸张）
+    printer.send_command("SHIFT 0")
     
     logging.info(f"打印机初始化完成: {width}mm x {height}mm")
 
