@@ -4,7 +4,7 @@ TSC打印机测试脚本 - 支持中文打印
 """
 import sys
 import os
-from printer import print_label, print_batch_labels
+from printer import print_label, print_batch_labels, print_qrcode_with_text
 
 # Windows编码设置 - 修复中文乱码
 if sys.platform == 'win32':
@@ -62,6 +62,16 @@ PRINT_CONFIGS = [
         "width": "100",
         "height": "90"
     },
+    {
+        "name": "测试5 - 二维码+文本",
+        "type": "qrcode_text",
+        "qr_content": "https://www.example.com/product/ABC123",
+        "text": "Product-ABC123-2024",
+        "qty": 1,
+        "width": "100",
+        "height": "90",
+        "qr_size": 8
+    },
 ]
 
 # ========================================
@@ -75,7 +85,7 @@ def run_test(config):
     print(f"{'='*50}")
     print(f"打印机IP: {PRINTER_IP}")
     
-    # 判断是批量打印还是单个打印
+    # 判断打印类型
     if config.get('type') == 'batch':
         # 批量打印
         print(f"打印模式: 批量打印（上下两行）")
@@ -95,6 +105,31 @@ def run_test(config):
                 height=config['height']
             )
             print("✅ [成功] 批量打印命令已发送")
+            return True
+        except Exception as e:
+            print(f"❌ [失败] {e}")
+            return False
+    elif config.get('type') == 'qrcode_text':
+        # 二维码+文本打印
+        print(f"打印模式: 二维码+文本")
+        print(f"二维码内容: {config['qr_content']}")
+        print(f"文本内容: {config['text']}")
+        print(f"打印数量: {config['qty']}")
+        print(f"二维码大小: {config['qr_size']}")
+        print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
+        print()
+        
+        try:
+            print_qrcode_with_text(
+                ip=PRINTER_IP,
+                qr_content=config['qr_content'],
+                text=config['text'],
+                qty=config['qty'],
+                width=config['width'],
+                height=config['height'],
+                qr_size=config['qr_size']
+            )
+            print("✅ [成功] 二维码+文本打印命令已发送")
             return True
         except Exception as e:
             print(f"❌ [失败] {e}")

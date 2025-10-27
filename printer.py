@@ -187,6 +187,66 @@ def print_qrcode(
         p.close_port()
 
 
+def print_qrcode_with_text(
+    ip: str,
+    qr_content: str,
+    text: str,
+    qty: int = 1,
+    width: str = "100",
+    height: str = "90",
+    qr_size: int = 8
+):
+    """
+    打印二维码+文本标签（二维码在上方，文本在下方）
+    
+    Args:
+        ip: 打印机IP地址（如：192.168.1.100）
+        qr_content: 二维码内容（URL或文本）
+        text: 下方显示的文本（支持中文、英文、数字）
+        qty: 打印数量
+        width: 标签宽度(mm)
+        height: 标签高度(mm)
+        qr_size: 二维码单元宽度(1-10，数字越大二维码越大)
+    """
+    p = TSCPrinter()
+    try:
+        # 打开网络端口
+        p.open_port(f"{ip}:9100")
+        
+        # 清除缓冲区
+        p.send_command("CLS")
+        
+        # 设置标签尺寸
+        p.send_command(f"SIZE {width} mm, {height} mm")
+        p.send_command("GAP 0 mm, 0 mm")
+        
+        # 设置打印参数
+        p.send_command("SPEED 4")
+        p.send_command("DENSITY 10")
+        p.send_command("DIRECTION 1")
+        
+        # 打印二维码（上方位置）
+        p.send_command_utf8(f'QRCODE 200,80,H,{qr_size},A,0,"{qr_content}"')
+        
+        # 打印文本（下方位置）- 使用Windows字体支持中英文
+        p.print_text_windows_font(
+            x=50,
+            y=450,
+            font_height=48,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="宋体",
+            text=text
+        )
+        
+        # 执行打印
+        p.send_command(f"PRINT {qty},1")
+        
+    finally:
+        p.close_port()
+
+
 def test_connection(ip: str) -> bool:
     """
     测试打印机连接
