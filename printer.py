@@ -4,7 +4,7 @@ TSC打印机核心模块（跨平台）
 """
 import logging
 from tsclib import TSCPrinter
-from config import DEFAULT_WIDTH, DEFAULT_HEIGHT
+from config import DEFAULT_WIDTH, DEFAULT_HEIGHT, DPI_RATIO
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -366,9 +366,12 @@ def print_calibration_border(
         # 初始化打印机设置
         _init_printer_settings(p, width, height)
         
-        # 转换为dots（假设200DPI: 1mm ≈ 8 dots）
-        width_dots = int(float(width) * 8)
-        height_dots = int(float(height) * 8)
+        # 转换为dots（使用config中的DPI_RATIO）
+        # 当前设置: {DPI_RATIO} dots/mm
+        width_dots = int(float(width) * DPI_RATIO)
+        height_dots = int(float(height) * DPI_RATIO)
+        
+        logging.info(f"打印区域: {width}mm × {height}mm = {width_dots} × {height_dots} dots (DPI比例: {DPI_RATIO})")
         
         # 打印外边框（矩形）
         # BOX x_start, y_start, x_end, y_end, line_thickness
