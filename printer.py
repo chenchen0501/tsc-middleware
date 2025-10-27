@@ -277,3 +277,138 @@ def test_connection(ip: str = "") -> bool:
     except Exception:
         return False
 
+
+def print_calibration_border(
+    qty: int = 1,
+    width: str = "100",
+    height: str = "90"
+):
+    """
+    打印校准边框和标记，用于检查打印区域是否从纸张开头正确开始
+    
+    会在标签的四个角和中心打印标记，以及边框线，帮助判断打印位置
+    
+    Args:
+        qty: 打印数量
+        width: 标签宽度(mm)
+        height: 标签高度(mm)
+    """
+    p = TSCPrinter()
+    try:
+        # 打开USB端口
+        logging.info("使用 USB 连接打印机...")
+        p.open_port(0)
+        
+        # 清除缓冲区
+        p.send_command("CLS")
+        
+        # 设置标签尺寸
+        p.send_command(f"SIZE {width} mm, {height} mm")
+        p.send_command("GAP 0 mm, 0 mm")
+        p.send_command("SPEED 4")
+        p.send_command("DENSITY 10")
+        p.send_command("DIRECTION 1")
+        
+        # 转换为dots（假设200DPI: 1mm ≈ 8 dots）
+        width_dots = int(float(width) * 8)
+        height_dots = int(float(height) * 8)
+        
+        # 打印外边框（矩形）
+        # BOX x_start, y_start, x_end, y_end, line_thickness
+        border_thickness = 3
+        p.send_command(f"BOX 10,10,{width_dots-10},{height_dots-10},{border_thickness}")
+        
+        # 打印四个角的标记文字
+        # 左上角
+        p.print_text_windows_font(
+            x=20, y=30,
+            font_height=32,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="Arial",
+            text="START(0,0)"
+        )
+        
+        # 右上角
+        p.print_text_windows_font(
+            x=width_dots-150, y=30,
+            font_height=32,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="Arial",
+            text=f"({width}mm,0)"
+        )
+        
+        # 左下角
+        p.print_text_windows_font(
+            x=20, y=height_dots-60,
+            font_height=32,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="Arial",
+            text=f"(0,{height}mm)"
+        )
+        
+        # 右下角
+        p.print_text_windows_font(
+            x=width_dots-150, y=height_dots-60,
+            font_height=32,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="Arial",
+            text=f"({width},{height}mm)"
+        )
+        
+        # 中心标记
+        center_x = width_dots // 2 - 60
+        center_y = height_dots // 2 - 20
+        p.print_text_windows_font(
+            x=center_x, y=center_y,
+            font_height=40,
+            rotation=0,
+            font_style=1,  # Bold
+            font_underline=0,
+            font_face_name="Arial",
+            text="CENTER"
+        )
+        
+        # 打印中心十字线
+        cross_size = 40
+        # 横线
+        p.send_command(f"BAR {width_dots//2 - cross_size},{height_dots//2},{cross_size*2},2")
+        # 竖线
+        p.send_command(f"BAR {width_dots//2},{height_dots//2 - cross_size},2,{cross_size*2}")
+        
+        # 打印顶部标题
+        p.print_text_windows_font(
+            x=width_dots//2 - 100, y=height_dots//2 + 40,
+            font_height=28,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="宋体",
+            text="打印区域校准测试"
+        )
+        
+        # 打印尺寸信息
+        p.print_text_windows_font(
+            x=width_dots//2 - 80, y=height_dots//2 + 80,
+            font_height=24,
+            rotation=0,
+            font_style=0,
+            font_underline=0,
+            font_face_name="Arial",
+            text=f"Size: {width}mm x {height}mm"
+        )
+        
+        # 执行打印
+        p.send_command(f"PRINT {qty},1")
+        
+    finally:
+        # 确保关闭端口
+        p.close_port()
+
