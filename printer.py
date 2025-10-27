@@ -4,6 +4,7 @@ TSC打印机核心模块（跨平台）
 """
 import logging
 from tsclib import TSCPrinter
+from config import DEFAULT_WIDTH, DEFAULT_HEIGHT
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -14,8 +15,8 @@ def print_label(
     text: str = "",
     barcode: str = "",
     qty: int = 1,
-    width: str = "100",
-    height: str = "90"
+    width: str = None,
+    height: str = None
 ):
     """
     打印标签
@@ -25,9 +26,15 @@ def print_label(
         text: 标签文本
         barcode: 条形码内容（可选，默认不打印条码）
         qty: 打印数量
-        width: 标签宽度(mm)
-        height: 标签高度(mm)
+        width: 标签宽度(mm)，默认使用config中的配置（10cm）
+        height: 标签高度(mm)，默认使用config中的配置（8cm）
     """
+    # 使用配置文件中的默认值
+    if width is None:
+        width = DEFAULT_WIDTH
+    if height is None:
+        height = DEFAULT_HEIGHT
+    
     p = TSCPrinter()
     try:
         # 打开USB端口（参数0表示第一个USB打印机）
@@ -70,20 +77,26 @@ def print_label(
 def print_batch_labels(
     ip: str = "",
     text_list: list[str] = None,
-    width: str = "100",
-    height: str = "90"
+    width: str = None,
+    height: str = None
 ):
     """
-    批量打印标签（10cm×9cm纸张，每张上下两行打印两个标签）
+    批量打印标签（每张上下两行打印两个标签）
     
     Args:
         ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         text_list: 要打印的文本列表，如 ["cc测试拆箱物料1_盖子_1_1", "cc测试拆箱物料2_底座_1_2"]
-        width: 标签宽度(mm)，默认100mm（10cm）
-        height: 标签高度(mm)，默认90mm（9cm）
+        width: 标签宽度(mm)，默认使用config中的配置（10cm）
+        height: 标签高度(mm)，默认使用config中的配置（8cm）
     """
     if text_list is None:
         text_list = []
+    
+    # 使用配置文件中的默认值
+    if width is None:
+        width = DEFAULT_WIDTH
+    if height is None:
+        height = DEFAULT_HEIGHT
     
     p = TSCPrinter()
     try:
@@ -143,8 +156,8 @@ def print_qrcode(
     content: str = "",
     text: str = "",
     qty: int = 1,
-    width: str = "100",
-    height: str = "90",
+    width: str = None,
+    height: str = None,
     qr_size: int = 8
 ):
     """
@@ -155,10 +168,16 @@ def print_qrcode(
         content: 二维码内容（URL或文本）
         text: 标签文本（可选）
         qty: 打印数量
-        width: 标签宽度(mm)
-        height: 标签高度(mm)
+        width: 标签宽度(mm)，默认使用config中的配置（10cm）
+        height: 标签高度(mm)，默认使用config中的配置（8cm）
         qr_size: 二维码单元宽度(1-10，数字越大二维码越大)
     """
+    # 使用配置文件中的默认值
+    if width is None:
+        width = DEFAULT_WIDTH
+    if height is None:
+        height = DEFAULT_HEIGHT
+    
     p = TSCPrinter()
     try:
         # 打开USB端口（参数0表示第一个USB打印机）
@@ -202,8 +221,8 @@ def print_qrcode_with_text(
     qr_content: str = "",
     text: str = "",
     qty: int = 1,
-    width: str = "100",
-    height: str = "90",
+    width: str = None,
+    height: str = None,
     qr_size: int = 8
 ):
     """
@@ -214,10 +233,16 @@ def print_qrcode_with_text(
         qr_content: 二维码内容（URL或文本）
         text: 下方显示的文本（支持中文、英文、数字）
         qty: 打印数量
-        width: 标签宽度(mm)
-        height: 标签高度(mm)
+        width: 标签宽度(mm)，默认使用config中的配置（10cm）
+        height: 标签高度(mm)，默认使用config中的配置（8cm）
         qr_size: 二维码单元宽度(1-10，数字越大二维码越大)
     """
+    # 使用配置文件中的默认值
+    if width is None:
+        width = DEFAULT_WIDTH
+    if height is None:
+        height = DEFAULT_HEIGHT
+    
     p = TSCPrinter()
     try:
         # 打开USB端口（参数0表示第一个USB打印机）
@@ -280,8 +305,8 @@ def test_connection(ip: str = "") -> bool:
 
 def print_calibration_border(
     qty: int = 1,
-    width: str = "100",
-    height: str = "90"
+    width: str = None,
+    height: str = None
 ):
     """
     打印校准边框和标记，用于检查打印区域是否从纸张开头正确开始
@@ -290,9 +315,15 @@ def print_calibration_border(
     
     Args:
         qty: 打印数量
-        width: 标签宽度(mm)
-        height: 标签高度(mm)
+        width: 标签宽度(mm)，默认使用config中的配置（10cm）
+        height: 标签高度(mm)，默认使用config中的配置（8cm）
     """
+    # 使用配置文件中的默认值
+    if width is None:
+        width = DEFAULT_WIDTH
+    if height is None:
+        height = DEFAULT_HEIGHT
+    
     p = TSCPrinter()
     try:
         # 打开USB端口

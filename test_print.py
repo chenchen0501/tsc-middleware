@@ -24,6 +24,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 # ========================================
 
 # 打印内容配置（已改为USB模式，无需配置IP）
+# 纸张区域：宽10cm（100mm）× 高8cm（80mm）
 PRINT_CONFIGS = [
     {
         "name": "测试1 - 英文打印",
@@ -31,7 +32,7 @@ PRINT_CONFIGS = [
         # "barcode": "JAVALY2024",
         "qty": 1,
         "width": "100",
-        "height": "90"
+        "height": "80"
     },
     {
         "name": "测试2 - 中文打印",
@@ -39,7 +40,7 @@ PRINT_CONFIGS = [
         # "barcode": "CN2024",
         "qty": 1,
         "width": "100",
-        "height": "90"
+        "height": "80"
     },
     {
         "name": "测试3 - 中英文混合",
@@ -47,7 +48,7 @@ PRINT_CONFIGS = [
         # "barcode": "MIX2024",
         "qty": 1,
         "width": "100",
-        "height": "90"
+        "height": "80"
     },
     {
         "name": "测试4 - 批量打印（上下两行）",
@@ -57,7 +58,7 @@ PRINT_CONFIGS = [
             "cc测试拆箱物料2_底座_1_2",
         ],
         "width": "100",
-        "height": "90"
+        "height": "80"
     },
     {
         "name": "测试5 - 二维码+文本",
@@ -66,7 +67,7 @@ PRINT_CONFIGS = [
         "text": "Product-ABC123-2024",
         "qty": 1,
         "width": "100",
-        "height": "90",
+        "height": "80",
         "qr_size": 8
     },
     {
@@ -75,7 +76,7 @@ PRINT_CONFIGS = [
         "description": "打印边框和角标记，检查打印是否从纸张开头正确开始",
         "qty": 1,
         "width": "100",
-        "height": "90"
+        "height": "80"
     },
 ]
 

@@ -5,42 +5,43 @@ TSC打印服务 - FastAPI入口
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from printer import print_label, print_qrcode, test_connection, print_batch_labels
+from config import DEFAULT_WIDTH, DEFAULT_HEIGHT
 
 app = FastAPI(
     title="TSC-Print-Service",
     version="2.0.0",
-    description="零驱动USB打印中间件 | macOS开发 ➜ Windows部署 | USB连接模式"
+    description="零驱动USB打印中间件 | macOS开发 ➜ Windows部署 | USB连接模式 | 纸张: 10cm×8cm"
 )
 
 
 class PrintJob(BaseModel):
-    """打印任务模型（USB模式）"""
+    """打印任务模型（USB模式，纸张区域10cm×8cm）"""
     text: str = Field(..., description="标签文本", json_schema_extra={"example": "Hello TSC USB"})
     barcode: str = Field("", description="条形码内容（可选）", json_schema_extra={"example": "1234567890"})
     qty: int = Field(1, ge=1, le=100, description="打印数量")
-    width: str = Field("100", description="标签宽度(mm)")
-    height: str = Field("90", description="标签高度(mm)")
+    width: str = Field(DEFAULT_WIDTH, description="标签宽度(mm)", json_schema_extra={"example": "100"})
+    height: str = Field(DEFAULT_HEIGHT, description="标签高度(mm)", json_schema_extra={"example": "80"})
 
 
 class QRCodeJob(BaseModel):
-    """二维码打印任务模型（USB模式）"""
+    """二维码打印任务模型（USB模式，纸张区域10cm×8cm）"""
     content: str = Field(..., description="二维码内容", json_schema_extra={"example": "https://www.example.com"})
     text: str = Field("", description="标签文本（可选）")
     qty: int = Field(1, ge=1, le=100, description="打印数量")
-    width: str = Field("100", description="标签宽度(mm)")
-    height: str = Field("90", description="标签高度(mm)")
+    width: str = Field(DEFAULT_WIDTH, description="标签宽度(mm)", json_schema_extra={"example": "100"})
+    height: str = Field(DEFAULT_HEIGHT, description="标签高度(mm)", json_schema_extra={"example": "80"})
     qr_size: int = Field(8, ge=1, le=10, description="二维码大小(1-10)")
 
 
 class BatchPrintJob(BaseModel):
-    """批量打印任务模型（USB模式）"""
+    """批量打印任务模型（USB模式，纸张区域10cm×8cm）"""
     text_list: list[str] = Field(
         ..., 
         description="要打印的文本列表", 
         json_schema_extra={"example": ["cc测试拆箱物料1_盖子_1_1", "cc测试拆箱物料2_底座_1_2", "cc测试拆箱物料3_配件_1_3"]}
     )
-    width: str = Field("100", description="标签宽度(mm)")
-    height: str = Field("90", description="标签高度(mm)")
+    width: str = Field(DEFAULT_WIDTH, description="标签宽度(mm)", json_schema_extra={"example": "100"})
+    height: str = Field(DEFAULT_HEIGHT, description="标签高度(mm)", json_schema_extra={"example": "80"})
 
 
 @app.get("/")
