@@ -4,6 +4,11 @@ TSC 打印机连接诊断脚本
 """
 import sys
 import traceback
+import logging
+
+# 设置日志级别为 WARNING，避免 tsclib 内部 DEBUG 日志干扰
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s - %(message)s")
+
 from tsclib import TSCPrinter
 
 
@@ -15,18 +20,20 @@ def test_usb_connection():
     
     p = TSCPrinter()
     try:
-        print("调用: p.open_port(0)")
+        print("⏳ 正在尝试: p.open_port(0)...")
         result = p.open_port(0)
-        print(f"✅ 成功! 返回值: {result}")
+        print(f"✅ 连接成功! 返回值: {result}")
+        print("⏳ 正在关闭端口...")
         p.close_port()
+        print("✅ 测试完成，端口已关闭")
         return True
     except Exception as e:
-        print(f"❌ 失败!")
-        print(f"错误类型: {type(e).__name__}")
-        print(f"错误信息: {e}")
+        print(f"❌ 连接失败!")
+        print(f"   错误类型: {type(e).__name__}")
+        print(f"   错误信息: {e}")
         if hasattr(e, "ToString"):
-            print(f"详细错误 (.NET): {e.ToString()}")
-        print("\n完整堆栈:")
+            print(f"   详细错误 (.NET): {e.ToString()}")
+        print("\n   完整堆栈:")
         traceback.print_exc()
         return False
 
@@ -39,18 +46,20 @@ def test_network_as_string():
     
     p = TSCPrinter()
     try:
-        print("调用: p.open_port('192.168.1.100:9100')")
+        print("⏳ 正在尝试: p.open_port('192.168.1.100:9100')...")
         result = p.open_port("192.168.1.100:9100")
-        print(f"✅ 成功! 返回值: {result}")
+        print(f"✅ 连接成功! 返回值: {result}")
+        print("⏳ 正在关闭端口...")
         p.close_port()
+        print("✅ 测试完成，端口已关闭")
         return True
     except Exception as e:
-        print(f"❌ 失败!")
-        print(f"错误类型: {type(e).__name__}")
-        print(f"错误信息: {e}")
+        print(f"❌ 连接失败!")
+        print(f"   错误类型: {type(e).__name__}")
+        print(f"   错误信息: {e}")
         if hasattr(e, "ToString"):
-            print(f"详细错误 (.NET): {e.ToString()}")
-        print("\n完整堆栈:")
+            print(f"   详细错误 (.NET): {e.ToString()}")
+        print("\n   完整堆栈:")
         traceback.print_exc()
         return False
 
@@ -63,7 +72,7 @@ def test_list_printers():
     
     p = TSCPrinter()
     try:
-        print("调用: p.list_printers()")
+        print("⏳ 正在扫描: p.list_printers()...")
         printers = p.list_printers()
         
         if printers:
@@ -72,15 +81,16 @@ def test_list_printers():
                 print(f"\n  打印机 {i}:")
                 print(f"    驱动名称: {printer['friendly_name']}")
                 print(f"    索引: {printer['index']}")
+            return True
         else:
-            print("⚠️  未找到 USB 打印机")
+            print("⚠️  未找到 USB 打印机 (这不算错误，可能没有USB连接)")
+            return False
         
-        return True
     except Exception as e:
-        print(f"❌ 失败!")
-        print(f"错误类型: {type(e).__name__}")
-        print(f"错误信息: {e}")
-        print("\n完整堆栈:")
+        print(f"❌ 扫描失败!")
+        print(f"   错误类型: {type(e).__name__}")
+        print(f"   错误信息: {e}")
+        print("\n   完整堆栈:")
         traceback.print_exc()
         return False
 
@@ -95,25 +105,28 @@ def test_driver_name():
     
     # 先获取打印机列表
     try:
+        print("⏳ 正在获取打印机列表...")
         printers = p.list_printers()
         if not printers:
-            print("⚠️  跳过: 未找到 USB 打印机")
+            print("⚠️  跳过测试: 未找到 USB 打印机")
             return False
         
         driver_name = printers[0]['friendly_name']
-        print(f"调用: p.open_port('{driver_name}')")
+        print(f"⏳ 正在尝试: p.open_port('{driver_name}')...")
         
         result = p.open_port(driver_name)
-        print(f"✅ 成功! 返回值: {result}")
+        print(f"✅ 连接成功! 返回值: {result}")
+        print("⏳ 正在关闭端口...")
         p.close_port()
+        print("✅ 测试完成，端口已关闭")
         return True
     except Exception as e:
-        print(f"❌ 失败!")
-        print(f"错误类型: {type(e).__name__}")
-        print(f"错误信息: {e}")
+        print(f"❌ 连接失败!")
+        print(f"   错误类型: {type(e).__name__}")
+        print(f"   错误信息: {e}")
         if hasattr(e, "ToString"):
-            print(f"详细错误 (.NET): {e.ToString()}")
-        print("\n完整堆栈:")
+            print(f"   详细错误 (.NET): {e.ToString()}")
+        print("\n   完整堆栈:")
         traceback.print_exc()
         return False
 
