@@ -1,13 +1,17 @@
 """
 TSC打印机核心模块（跨平台）
-支持USB和网络打印机
+支持USB连接（已改为使用USB模式，不再使用网络连接）
 """
+import logging
 from tsclib import TSCPrinter
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def print_label(
-    ip: str,
-    text: str,
+    ip: str = "",
+    text: str = "",
     barcode: str = "",
     qty: int = 1,
     width: str = "100",
@@ -17,7 +21,7 @@ def print_label(
     打印标签
     
     Args:
-        ip: 打印机IP地址（如：192.168.1.100）
+        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         text: 标签文本
         barcode: 条形码内容（可选，默认不打印条码）
         qty: 打印数量
@@ -26,8 +30,9 @@ def print_label(
     """
     p = TSCPrinter()
     try:
-        # 打开网络端口（9100是TSC默认端口）
-        p.open_port(f"{ip}:9100")
+        # 打开USB端口（参数0表示第一个USB打印机）
+        logging.info("使用 USB 连接打印机...")
+        p.open_port(0)
         
         # 清除缓冲区
         p.send_command("CLS")
@@ -63,8 +68,8 @@ def print_label(
 
 
 def print_batch_labels(
-    ip: str,
-    text_list: list[str],
+    ip: str = "",
+    text_list: list[str] = None,
     width: str = "100",
     height: str = "90"
 ):
@@ -72,15 +77,19 @@ def print_batch_labels(
     批量打印标签（10cm×9cm纸张，每张上下两行打印两个标签）
     
     Args:
-        ip: 打印机IP地址（如：192.168.1.100）
+        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         text_list: 要打印的文本列表，如 ["cc测试拆箱物料1_盖子_1_1", "cc测试拆箱物料2_底座_1_2"]
         width: 标签宽度(mm)，默认100mm（10cm）
         height: 标签高度(mm)，默认90mm（9cm）
     """
+    if text_list is None:
+        text_list = []
+    
     p = TSCPrinter()
     try:
-        # 打开网络端口
-        p.open_port(f"{ip}:9100")
+        # 打开USB端口（参数0表示第一个USB打印机）
+        logging.info("使用 USB 连接打印机...")
+        p.open_port(0)
         
         # 每两个文本为一组，打印在一张纸上（上下两行）
         for i in range(0, len(text_list), 2):
@@ -130,8 +139,8 @@ def print_batch_labels(
 
 
 def print_qrcode(
-    ip: str,
-    content: str,
+    ip: str = "",
+    content: str = "",
     text: str = "",
     qty: int = 1,
     width: str = "100",
@@ -142,7 +151,7 @@ def print_qrcode(
     打印二维码标签
     
     Args:
-        ip: 打印机IP地址（如：192.168.1.100）
+        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         content: 二维码内容（URL或文本）
         text: 标签文本（可选）
         qty: 打印数量
@@ -152,8 +161,9 @@ def print_qrcode(
     """
     p = TSCPrinter()
     try:
-        # 打开网络端口
-        p.open_port(f"{ip}:9100")
+        # 打开USB端口（参数0表示第一个USB打印机）
+        logging.info("使用 USB 连接打印机...")
+        p.open_port(0)
         
         # 清除缓冲区
         p.send_command("CLS")
@@ -188,9 +198,9 @@ def print_qrcode(
 
 
 def print_qrcode_with_text(
-    ip: str,
-    qr_content: str,
-    text: str,
+    ip: str = "",
+    qr_content: str = "",
+    text: str = "",
     qty: int = 1,
     width: str = "100",
     height: str = "90",
@@ -200,7 +210,7 @@ def print_qrcode_with_text(
     打印二维码+文本标签（二维码在上方，文本在下方）
     
     Args:
-        ip: 打印机IP地址（如：192.168.1.100）
+        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         qr_content: 二维码内容（URL或文本）
         text: 下方显示的文本（支持中文、英文、数字）
         qty: 打印数量
@@ -210,8 +220,9 @@ def print_qrcode_with_text(
     """
     p = TSCPrinter()
     try:
-        # 打开网络端口
-        p.open_port(f"{ip}:9100")
+        # 打开USB端口（参数0表示第一个USB打印机）
+        logging.info("使用 USB 连接打印机...")
+        p.open_port(0)
         
         # 清除缓冲区
         p.send_command("CLS")
@@ -247,19 +258,20 @@ def print_qrcode_with_text(
         p.close_port()
 
 
-def test_connection(ip: str) -> bool:
+def test_connection(ip: str = "") -> bool:
     """
     测试打印机连接
     
     Args:
-        ip: 打印机IP地址
+        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         
     Returns:
         bool: 连接成功返回True
     """
     p = TSCPrinter()
     try:
-        p.open_port(f"{ip}:9100")
+        logging.info("测试 USB 连接...")
+        p.open_port(0)
         p.close_port()
         return True
     except Exception:

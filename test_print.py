@@ -23,10 +23,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 # 📝 配置区域 - 请根据需要修改以下内容
 # ========================================
 
-# 打印机IP地址
-PRINTER_IP = "192.168.1.100"
-
-# 打印内容配置
+# 打印内容配置（已改为USB模式，无需配置IP）
 PRINT_CONFIGS = [
     {
         "name": "测试1 - 英文打印",
@@ -83,7 +80,7 @@ def run_test(config):
     print(f"\n{'='*50}")
     print(f"🖨️  {config['name']}")
     print(f"{'='*50}")
-    print(f"打印机IP: {PRINTER_IP}")
+    print(f"打印机模式: USB")
     
     # 判断打印类型
     if config.get('type') == 'batch':
@@ -99,12 +96,11 @@ def run_test(config):
         
         try:
             print_batch_labels(
-                ip=PRINTER_IP,
                 text_list=config['text_list'],
                 width=config['width'],
                 height=config['height']
             )
-            print("✅ [成功] 批量打印命令已发送")
+            print("✅ [成功] 批量打印命令已发送到USB打印机")
             return True
         except Exception as e:
             print(f"❌ [失败] {e}")
@@ -121,7 +117,6 @@ def run_test(config):
         
         try:
             print_qrcode_with_text(
-                ip=PRINTER_IP,
                 qr_content=config['qr_content'],
                 text=config['text'],
                 qty=config['qty'],
@@ -129,7 +124,7 @@ def run_test(config):
                 height=config['height'],
                 qr_size=config['qr_size']
             )
-            print("✅ [成功] 二维码+文本打印命令已发送")
+            print("✅ [成功] 二维码+文本打印命令已发送到USB打印机")
             return True
         except Exception as e:
             print(f"❌ [失败] {e}")
@@ -137,21 +132,20 @@ def run_test(config):
     else:
         # 单个打印
         print(f"文本内容: {config['text']}")
-        print(f"条形码: {config['barcode']}")
+        print(f"条形码: {config.get('barcode', '无')}")
         print(f"打印数量: {config['qty']}")
         print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
         print()
         
         try:
             print_label(
-                ip=PRINTER_IP,
                 text=config['text'],
-                barcode=config['barcode'],
+                barcode=config.get('barcode', ''),
                 qty=config['qty'],
                 width=config['width'],
                 height=config['height']
             )
-            print("✅ [成功] 打印命令已发送")
+            print("✅ [成功] 打印命令已发送到USB打印机")
             return True
         except Exception as e:
             print(f"❌ [失败] {e}")
@@ -161,9 +155,9 @@ def run_test(config):
 def main():
     """主函数"""
     print("\n" + "="*50)
-    print("  TSC打印机测试程序")
+    print("  TSC打印机测试程序（USB模式）")
     print("="*50)
-    print(f"\n📍 目标打印机: {PRINTER_IP}")
+    print(f"\n📍 连接模式: USB")
     print(f"📋 测试任务数: {len(PRINT_CONFIGS)}")
     
     # 询问用户要执行哪个测试
