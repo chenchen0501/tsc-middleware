@@ -4,7 +4,7 @@ TSC打印机测试脚本 - 支持中文打印
 """
 import sys
 import os
-from printer import print_label, print_batch_labels, print_qrcode_with_text, print_calibration_border
+from printer import print_label, print_batch_labels, print_qrcode_with_text, print_calibration_border, calibrate_paper
 
 # Windows编码设置 - 修复中文乱码
 if sys.platform == 'win32':
@@ -77,6 +77,11 @@ PRINT_CONFIGS = [
         "qty": 1,
         "width": "100",
         "height": "80"
+    },
+    {
+        "name": "测试7 - 纸张自动校准",
+        "type": "paper_calibration",
+        "description": "让打印机自动检测纸张位置，解决打印偏移问题（会打印测试页）"
     },
 ]
 
@@ -166,6 +171,37 @@ def run_test(config):
             print("  3. 四个角的标记是否在纸张的四角")
             print("  4. 中心标记是否在纸张中心")
             return True
+        except Exception as e:
+            print(f"❌ [失败] {e}")
+            return False
+    elif config.get('type') == 'paper_calibration':
+        # 纸张自动校准
+        print(f"打印模式: 纸张自动校准")
+        print(f"说明: {config.get('description', '')}")
+        print()
+        print("⚠️  注意:")
+        print("  - 打印机会自动检测纸张位置和间隙")
+        print("  - 校准过程中会打印一张测试页")
+        print("  - 校准后可解决打印位置偏移问题")
+        print("  - 建议在首次使用或更换纸张后执行")
+        print()
+        
+        confirm = input("是否确认执行纸张校准? (y/n): ")
+        if confirm.lower() != 'y':
+            print("⚠️  已取消校准")
+            return False
+        
+        try:
+            print("⏳ 正在执行纸张校准...")
+            success = calibrate_paper()
+            if success:
+                print("✅ [成功] 纸张校准完成，打印机已打印测试页")
+                print()
+                print("💡 提示: 校准完成后，请运行测试6检查打印位置是否正确")
+                return True
+            else:
+                print("❌ [失败] 纸张校准失败")
+                return False
         except Exception as e:
             print(f"❌ [失败] {e}")
             return False

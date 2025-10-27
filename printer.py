@@ -10,6 +10,48 @@ from config import DEFAULT_WIDTH, DEFAULT_HEIGHT
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
+def _init_printer_settings(printer: TSCPrinter, width: str, height: str):
+    """
+    初始化打印机设置
+    
+    Args:
+        printer: TSCPrinter实例
+        width: 标签宽度(mm)
+        height: 标签高度(mm)
+    """
+    # 清除缓冲区
+    printer.send_command("CLS")
+    
+    # 设置标签尺寸（重要：先设置尺寸）
+    printer.send_command(f"SIZE {width} mm, {height} mm")
+    
+    # 设置间隙传感器（0间隙用于连续纸或无间隙标签）
+    printer.send_command("GAP 0 mm, 0 mm")
+    
+    # 设置打印方向（0=正常，1=镜像）
+    printer.send_command("DIRECTION 0")
+    
+    # 设置参考点（0,0）- 从左上角开始打印
+    printer.send_command("REFERENCE 0,0")
+    
+    # 设置偏移量为0（不偏移）
+    printer.send_command("OFFSET 0 mm")
+    
+    # 设置打印速度（1-14，数字越小越慢但质量越好）
+    printer.send_command("SPEED 4")
+    
+    # 设置打印浓度（0-15）
+    printer.send_command("DENSITY 12")
+    
+    # 设置为撕离模式（打印后自动撕纸位置）
+    printer.send_command("SET TEAR ON")
+    
+    # 发送自动校准命令（帮助打印机识别纸张位置）
+    # printer.send_command("SELFTEST")  # 这个会打印测试页，注释掉
+    
+    logging.info(f"打印机初始化完成: {width}mm x {height}mm")
+
+
 def print_label(
     ip: str = "",
     text: str = "",
@@ -41,15 +83,8 @@ def print_label(
         logging.info("使用 USB 连接打印机...")
         p.open_port(0)
         
-        # 清除缓冲区
-        p.send_command("CLS")
-        
-        # 设置标签尺寸
-        p.send_command(f"SIZE {width} mm, {height} mm")
-        p.send_command("GAP 2 mm, 0 mm")
-        p.send_command("SPEED 4")
-        p.send_command("DENSITY 10")
-        p.send_command("DIRECTION 1")
+        # 初始化打印机设置
+        _init_printer_settings(p, width, height)
         
         # 打印文本（使用Windows字体支持中文）
         p.print_text_windows_font(
@@ -106,15 +141,8 @@ def print_batch_labels(
         
         # 每两个文本为一组，打印在一张纸上（上下两行）
         for i in range(0, len(text_list), 2):
-            # 清除缓冲区
-            p.send_command("CLS")
-            
-            # 设置标签尺寸
-            p.send_command(f"SIZE {width} mm, {height} mm")
-            p.send_command("GAP 0 mm, 0 mm")  # 减小标签间隔
-            p.send_command("SPEED 4")
-            p.send_command("DENSITY 10")
-            p.send_command("DIRECTION 1")
+            # 初始化打印机设置
+            _init_printer_settings(p, width, height)
             
             # 打印第一行（上方）- 使用Windows字体支持中文
             first_text = text_list[i]
@@ -184,17 +212,8 @@ def print_qrcode(
         logging.info("使用 USB 连接打印机...")
         p.open_port(0)
         
-        # 清除缓冲区
-        p.send_command("CLS")
-        
-        # 设置标签尺寸
-        p.send_command(f"SIZE {width} mm, {height} mm")
-        p.send_command("GAP 2 mm, 0 mm")
-        
-        # 设置打印参数
-        p.send_command("SPEED 4")
-        p.send_command("DENSITY 10")
-        p.send_command("DIRECTION 1")
+        # 初始化打印机设置
+        _init_printer_settings(p, width, height)
         
         # 打印文本（如果提供）
         if text:
@@ -249,17 +268,8 @@ def print_qrcode_with_text(
         logging.info("使用 USB 连接打印机...")
         p.open_port(0)
         
-        # 清除缓冲区
-        p.send_command("CLS")
-        
-        # 设置标签尺寸
-        p.send_command(f"SIZE {width} mm, {height} mm")
-        p.send_command("GAP 0 mm, 0 mm")
-        
-        # 设置打印参数
-        p.send_command("SPEED 4")
-        p.send_command("DENSITY 10")
-        p.send_command("DIRECTION 1")
+        # 初始化打印机设置
+        _init_printer_settings(p, width, height)
         
         # 打印二维码（上方位置）
         p.send_command_utf8(f'QRCODE 200,80,H,{qr_size},A,0,"{qr_content}"')
@@ -303,6 +313,29 @@ def test_connection(ip: str = "") -> bool:
         return False
 
 
+def calibrate_paper():
+    """
+    执行纸张校准
+    
+    让打印机自动检测纸张位置和间隙，解决打印位置不准确的问题
+    """
+    p = TSCPrinter()
+    try:
+        logging.info("开始纸张校准...")
+        p.open_port(0)
+        
+        # 发送自动校准命令
+        p.send_command("SELFTEST")
+        
+        logging.info("纸张校准完成，打印机将打印测试页")
+        
+        p.close_port()
+        return True
+    except Exception as e:
+        logging.error(f"纸张校准失败: {e}")
+        return False
+
+
 def print_calibration_border(
     qty: int = 1,
     width: str = None,
@@ -330,15 +363,8 @@ def print_calibration_border(
         logging.info("使用 USB 连接打印机...")
         p.open_port(0)
         
-        # 清除缓冲区
-        p.send_command("CLS")
-        
-        # 设置标签尺寸
-        p.send_command(f"SIZE {width} mm, {height} mm")
-        p.send_command("GAP 0 mm, 0 mm")
-        p.send_command("SPEED 4")
-        p.send_command("DENSITY 10")
-        p.send_command("DIRECTION 1")
+        # 初始化打印机设置
+        _init_printer_settings(p, width, height)
         
         # 转换为dots（假设200DPI: 1mm ≈ 8 dots）
         width_dots = int(float(width) * 8)
