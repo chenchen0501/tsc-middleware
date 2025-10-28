@@ -47,7 +47,7 @@ class UnifiedPrintJob(BaseModel):
     所有打印参数（width、height、qr_size等）根据type固定，用户无需传递
     """
     type: int = Field(..., description="打印类型: 1=纯文本批量打印（每张纸两个）, 2=二维码+文本批量打印（每个独占一张）", json_schema_extra={"example": 1})
-    list: list[PrintItem] = Field(..., description="打印项列表", json_schema_extra={"example": [{"text": "物料1"}, {"text": "物料2"}]})
+    print_list: list[PrintItem] = Field(..., description="打印项列表", json_schema_extra={"example": [{"text": "物料1"}, {"text": "物料2"}]})
 
 
 @app.get("/")
@@ -77,27 +77,27 @@ def api_print(job: UnifiedPrintJob):
     
     **type = 1: 批量纯文本打印**
     - 每张纸上下两行打印两个标签
-    - list中每个对象只需要 text 字段
+    - print_list中每个对象只需要 text 字段
     - 示例: 传入3个文本，会打印2张纸（第1张有2个标签，第2张有1个标签）
     - 固定参数: width=100mm, height=80mm
     
     **type = 2: 批量二维码+文本打印**
     - 每个二维码独占一张纸
-    - list中每个对象需要 text 和 qr_content 字段
+    - print_list中每个对象需要 text 和 qr_content 字段
     - 固定参数: width=100mm, height=80mm, qr_size=8
     """
     try:
-        # 验证list不为空
-        if not job.list:
+        # 验证print_list不为空
+        if not job.print_list:
             raise HTTPException(
                 status_code=400,
-                detail="list参数不能为空"
+                detail="print_list参数不能为空"
             )
         
         # type = 1: 批量纯文本打印，每张纸两行
         if job.type == 1:
             # 提取文本列表
-            text_list = [item.text for item in job.list]
+            text_list = [item.text for item in job.print_list]
             
             # 调用 Type 1 打印服务（固定参数）
             print_type1(
@@ -117,15 +117,15 @@ def api_print(job: UnifiedPrintJob):
         # type = 2: 批量二维码+文本打印，每个独占一张纸
         elif job.type == 2:
             # 验证每个item都有qr_content
-            for i, item in enumerate(job.list):
+            for i, item in enumerate(job.print_list):
                 if not item.qr_content:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"type=2时，list中第{i+1}个对象的qr_content不能为空"
+                        detail=f"type=2时，print_list中第{i+1}个对象的qr_content不能为空"
                     )
             
             # 批量打印二维码（每个独占一张）
-            for item in job.list:
+            for item in job.print_list:
                 print_type2(
                     qr_content=item.qr_content,
                     text=item.text,
@@ -137,7 +137,7 @@ def api_print(job: UnifiedPrintJob):
             
             return {
                 "status": "ok",
-                "message": f"二维码批量打印成功：{len(job.list)}张标签"
+                "message": f"二维码批量打印成功：{len(job.print_list)}张标签"
             }
         
         # 不支持的type

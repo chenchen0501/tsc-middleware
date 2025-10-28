@@ -94,10 +94,10 @@ Content-Type: application/json
 
 **通用参数说明**
 
-| 参数名 | 类型          | 必填 | 说明                                           |
-| ------ | ------------- | ---- | ---------------------------------------------- |
-| type   | integer       | 是   | 打印类型：1=纯文本批量, 2=二维码批量           |
-| list   | array[object] | 是   | 打印项列表，每个对象包含 text（和 qr_content） |
+| 参数名     | 类型          | 必填 | 说明                                              |
+| ---------- | ------------- | ---- | ------------------------------------------------- |
+| type       | integer       | 是   | 打印类型：1=纯文本批量, 2=二维码批量              |
+| print_list | array[object] | 是   | 打印项列表，每个对象包含 text（和 qr_content）    |
 
 **重要提示**：所有打印参数（width、height、qr_size）已根据 type 固定，用户无需传递。
 
@@ -107,7 +107,7 @@ Content-Type: application/json
 
 每张纸上下两行打印两个标签
 
-**list 对象结构**
+**print_list 对象结构**
 
 | 字段名 | 类型   | 必填 | 说明     | 示例     |
 | ------ | ------ | ---- | -------- | -------- |
@@ -118,7 +118,7 @@ Content-Type: application/json
 ```json
 {
   "type": 1,
-  "list": [
+  "print_list": [
     { "text": "cc测试拆箱物料1_盖子_1_1" },
     { "text": "cc测试拆箱物料2_底座_1_2" },
     { "text": "cc测试拆箱物料3_配件_1_3" }
@@ -148,7 +148,7 @@ Content-Type: application/json
 
 ```json
 {
-  "detail": "list参数不能为空"
+  "detail": "print_list参数不能为空"
 }
 ```
 
@@ -158,7 +158,7 @@ Content-Type: application/json
 
 每个二维码独占一张纸
 
-**list 对象结构**
+**print_list 对象结构**
 
 | 字段名     | 类型   | 必填 | 说明                     | 示例                                     |
 | ---------- | ------ | ---- | ------------------------ | ---------------------------------------- |
@@ -170,7 +170,7 @@ Content-Type: application/json
 ```json
 {
   "type": 2,
-  "list": [
+  "print_list": [
     {
       "text": "Product-ABC123-2024",
       "qr_content": "https://www.example.com/product/ABC123"
@@ -204,13 +204,13 @@ Content-Type: application/json
 
 ```json
 {
-  "detail": "list参数不能为空"
+  "detail": "print_list参数不能为空"
 }
 ```
 
 ```json
 {
-  "detail": "type=2时，list中第1个对象的qr_content不能为空"
+  "detail": "type=2时，print_list中第1个对象的qr_content不能为空"
 }
 ```
 
@@ -243,7 +243,7 @@ print(response.json())
 # 2. 批量纯文本打印（type=1）
 response = requests.post(f"{BASE_URL}/print", json={
     "type": 1,
-    "list": [
+    "print_list": [
         {"text": "cc测试拆箱物料1_盖子_1_1"},
         {"text": "cc测试拆箱物料2_底座_1_2"},
         {"text": "cc测试拆箱物料3_配件_1_3"}
@@ -255,7 +255,7 @@ print(response.json())
 # 3. 批量二维码+文本打印（type=2）
 response = requests.post(f"{BASE_URL}/print", json={
     "type": 2,
-    "list": [
+    "print_list": [
         {
             "text": "Product-ABC123-2024",
             "qr_content": "https://www.example.com/product/ABC123"
@@ -281,7 +281,7 @@ curl -X POST http://localhost:8000/print \
   -H "Content-Type: application/json" \
   -d '{
     "type": 1,
-    "list": [
+    "print_list": [
       {"text": "cc测试拆箱物料1_盖子_1_1"},
       {"text": "cc测试拆箱物料2_底座_1_2"}
     ]
@@ -292,7 +292,7 @@ curl -X POST http://localhost:8000/print \
   -H "Content-Type: application/json" \
   -d '{
     "type": 2,
-    "list": [
+    "print_list": [
       {
         "text": "Product-ABC123-2024",
         "qr_content": "https://www.example.com/product/ABC123"
@@ -317,7 +317,7 @@ async function batchTextPrint() {
   try {
     const response = await axios.post(`${BASE_URL}/print`, {
       type: 1,
-      list: [
+      print_list: [
         { text: "cc测试拆箱物料1_盖子_1_1" },
         { text: "cc测试拆箱物料2_底座_1_2" },
         { text: "cc测试拆箱物料3_配件_1_3" },
@@ -334,7 +334,7 @@ async function batchQrcodePrint() {
   try {
     const response = await axios.post(`${BASE_URL}/print`, {
       type: 2,
-      list: [
+      print_list: [
         {
           text: "Product-ABC123-2024",
           qr_content: "https://www.example.com/product/ABC123",
@@ -376,7 +376,7 @@ batchQrcodePrint();
 
 7. **type=2 批量打印**: 每个二维码+文本独占一张纸，适合需要单独撕下的场景
 
-8. **参数结构**: 统一使用 `list` 数组，每个元素都是对象，包含 `text` 字段（type=2 还需要 `qr_content` 字段）
+8. **参数结构**: 统一使用 `print_list` 数组，每个元素都是对象，包含 `text` 字段（type=2 还需要 `qr_content` 字段）
 
 9. **跨域访问（CORS）**:
    - 已启用 CORS 中间件，允许所有源（`*`）访问
