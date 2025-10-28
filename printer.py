@@ -111,20 +111,32 @@ def print_label(
         p.close_port()
 
 
-def print_batch_labels(
-    ip: str = "",
+def print_type1(
     text_list: list[str] = None,
     width: str = None,
     height: str = None
 ):
     """
-    批量打印标签（每张上下两行打印两个标签）
+    Type 1: 批量纯文本打印（每张纸上下两行打印两个标签）
+    
+    打印方式：
+    - 每张纸上下两行打印两个标签
+    - 自动分组：每两个文本为一组打印在同一张纸上
+    - 如果是奇数个标签，最后一张纸只打印一个
+    
+    固定参数：
+    - width: 100mm (10cm)
+    - height: 80mm (8cm)
+    - 字体：宋体，56点
     
     Args:
-        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
-        text_list: 要打印的文本列表，如 ["cc测试拆箱物料1_盖子_1_1", "cc测试拆箱物料2_底座_1_2"]
-        width: 标签宽度(mm)，默认使用config中的配置（10cm）
-        height: 标签高度(mm)，默认使用config中的配置（8cm）
+        text_list: 要打印的文本列表，如 ["物料1", "物料2", "物料3"]
+        width: 标签宽度(mm)，默认100mm（一般不需要修改）
+        height: 标签高度(mm)，默认80mm（一般不需要修改）
+    
+    示例：
+        print_type1(["物料1", "物料2", "物料3"])
+        # 输出: 打印2张纸，第1张有2个标签，第2张有1个标签
     """
     if text_list is None:
         text_list = []
@@ -181,64 +193,7 @@ def print_batch_labels(
         p.close_port()
 
 
-def print_qrcode(
-    ip: str = "",
-    content: str = "",
-    text: str = "",
-    qty: int = 1,
-    width: str = None,
-    height: str = None,
-    qr_size: int = 8
-):
-    """
-    打印二维码标签
-    
-    Args:
-        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
-        content: 二维码内容（URL或文本）
-        text: 标签文本（可选）
-        qty: 打印数量
-        width: 标签宽度(mm)，默认使用config中的配置（10cm）
-        height: 标签高度(mm)，默认使用config中的配置（8cm）
-        qr_size: 二维码单元宽度(1-10，数字越大二维码越大)
-    """
-    # 使用配置文件中的默认值
-    if width is None:
-        width = DEFAULT_WIDTH
-    if height is None:
-        height = DEFAULT_HEIGHT
-    
-    p = TSCPrinter()
-    try:
-        # 打开USB端口（参数0表示第一个USB打印机）
-        logging.info("使用 USB 连接打印机...")
-        p.open_port(0)
-        
-        # 初始化打印机设置
-        _init_printer_settings(p, width, height)
-        
-        # 打印文本（如果提供）
-        if text:
-            # 使用UTF-8编码发送中文文本
-            p.send_command_utf8(f'TEXT 250,30,"5",0,1,1,"{text}"')
-            qr_y = 150  # 二维码位置居中
-        else:
-            qr_y = 100
-        
-        # 打印二维码（居中位置）
-        # QRCODE x,y,纠错等级,单元宽度,模式,旋转,"内容"
-        # 二维码内容使用UTF-8编码
-        p.send_command_utf8(f'QRCODE 250,{qr_y},H,{qr_size},A,0,"{content}"')
-        
-        # 执行打印
-        p.send_command(f"PRINT {qty},1")
-        
-    finally:
-        p.close_port()
-
-
-def print_qrcode_with_text(
-    ip: str = "",
+def print_type2(
     qr_content: str = "",
     text: str = "",
     qty: int = 1,
@@ -247,16 +202,34 @@ def print_qrcode_with_text(
     qr_size: int = 8
 ):
     """
-    打印二维码+文本标签（二维码在上方，文本在下方）
+    Type 2: 批量二维码+文本打印（每个二维码独占一张纸）
+    
+    打印方式：
+    - 二维码在上方，文本在下方
+    - 每个二维码+文本独占一张纸
+    - 适合需要单独撕下的场景
+    
+    固定参数：
+    - width: 100mm (10cm)
+    - height: 80mm (8cm)
+    - qr_size: 8（二维码大小）
+    - 字体：宋体，48点
     
     Args:
-        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         qr_content: 二维码内容（URL或文本）
         text: 下方显示的文本（支持中文、英文、数字）
-        qty: 打印数量
-        width: 标签宽度(mm)，默认使用config中的配置（10cm）
-        height: 标签高度(mm)，默认使用config中的配置（8cm）
-        qr_size: 二维码单元宽度(1-10，数字越大二维码越大)
+        qty: 打印数量（默认1张）
+        width: 标签宽度(mm)，默认100mm（一般不需要修改）
+        height: 标签高度(mm)，默认80mm（一般不需要修改）
+        qr_size: 二维码单元宽度(1-10)，默认8（一般不需要修改）
+    
+    示例：
+        print_type2(
+            qr_content="https://example.com/product/123",
+            text="产品编号-ABC123",
+            qty=1
+        )
+        # 输出: 打印1张纸，包含二维码和文本
     """
     # 使用配置文件中的默认值
     if width is None:
@@ -473,4 +446,19 @@ def print_calibration_border(
     finally:
         # 确保关闭端口
         p.close_port()
+
+
+# ============================================================
+# 兼容性别名：保留旧方法名，映射到新的 type 方法
+# ============================================================
+
+def print_batch_labels(text_list: list[str] = None, width: str = None, height: str = None):
+    """兼容性别名：调用 print_type1"""
+    return print_type1(text_list=text_list, width=width, height=height)
+
+
+def print_qrcode_with_text(qr_content: str = "", text: str = "", qty: int = 1, 
+                           width: str = None, height: str = None, qr_size: int = 8, ip: str = ""):
+    """兼容性别名：调用 print_type2"""
+    return print_type2(qr_content=qr_content, text=text, qty=qty, width=width, height=height, qr_size=qr_size)
 

@@ -14,5 +14,6 @@ DEFAULT_HEIGHT = "80"   # 标签高度(mm) - 8cm
 #   - TTP-644 (600 DPI): 23.62 dots/mm
 DPI_RATIO = 11.81  # dots per mm (TTE-344 = 300 DPI)
 
+
 # 注意：已改为USB连接模式，无需配置IP地址
 

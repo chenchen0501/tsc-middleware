@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
-from printer import print_batch_labels, print_qrcode_with_text
+from printer import print_type1, print_type2
 from config import DEFAULT_WIDTH, DEFAULT_HEIGHT
 
 app = FastAPI(
@@ -99,8 +99,8 @@ def api_print(job: UnifiedPrintJob):
             # 提取文本列表
             text_list = [item.text for item in job.list]
             
-            # 调用批量打印服务（固定参数）
-            print_batch_labels(
+            # 调用 Type 1 打印服务（固定参数）
+            print_type1(
                 text_list=text_list,
                 width=DEFAULT_WIDTH,
                 height=DEFAULT_HEIGHT
@@ -126,7 +126,7 @@ def api_print(job: UnifiedPrintJob):
             
             # 批量打印二维码（每个独占一张）
             for item in job.list:
-                print_qrcode_with_text(
+                print_type2(
                     qr_content=item.qr_content,
                     text=item.text,
                     qty=1,  # 固定每次打印1张

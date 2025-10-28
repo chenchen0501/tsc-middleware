@@ -26,32 +26,21 @@ if hasattr(sys.stderr, 'reconfigure'):
 # 打印内容配置（已改为USB模式，无需配置IP）
 # 纸张区域：宽10cm（100mm）× 高8cm（80mm）
 PRINT_CONFIGS = [
-    {
-        "name": "测试1 - 英文打印",
-        "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        # "barcode": "JAVALY2024",
+        {
+        "name": "校准1 - 打印区域校准（边框测试）",
+        "type": "calibration",
+        "description": "打印边框和角标记，检查打印是否从纸张开头正确开始",
         "qty": 1,
         "width": "100",
         "height": "80"
     },
     {
-        "name": "测试2 - 中文打印",
-        "text": "哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈",
-        # "barcode": "CN2024",
-        "qty": 1,
-        "width": "100",
-        "height": "80"
+        "name": "校准2 - 纸张自动校准",
+        "type": "paper_calibration",
+        "description": "让打印机自动检测纸张位置，解决打印偏移问题（会打印测试页）"
     },
     {
-        "name": "测试3 - 中英文混合",
-        "text": "基本粒子HHHHHHHHHHHHHHHHH",
-        # "barcode": "MIX2024",
-        "qty": 1,
-        "width": "100",
-        "height": "80"
-    },
-    {
-        "name": "测试4 - 批量打印（上下两行）",
+        "name": "类型1 - 批量打印（上下两行）",
         "type": "batch",
         "text_list": [
             "cc测试拆箱物料1_盖子_1_1",
@@ -61,7 +50,7 @@ PRINT_CONFIGS = [
         "height": "80"
     },
     {
-        "name": "测试5 - 二维码+文本",
+        "name": "类型2 - 二维码+文本",
         "type": "qrcode_text",
         "qr_content": "https://www.example.com/product/ABC123",
         "text": "Product-ABC123-2024",
@@ -70,19 +59,7 @@ PRINT_CONFIGS = [
         "height": "80",
         "qr_size": 8
     },
-    {
-        "name": "测试6 - 打印区域校准（边框测试）",
-        "type": "calibration",
-        "description": "打印边框和角标记，检查打印是否从纸张开头正确开始",
-        "qty": 1,
-        "width": "100",
-        "height": "80"
-    },
-    {
-        "name": "测试7 - 纸张自动校准",
-        "type": "paper_calibration",
-        "description": "让打印机自动检测纸张位置，解决打印偏移问题（会打印测试页）"
-    },
+
 ]
 
 # ========================================
