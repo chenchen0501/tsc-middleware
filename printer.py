@@ -4,7 +4,12 @@ TSC打印机核心模块（跨平台）
 """
 import logging
 from tsclib import TSCPrinter
-from config import DEFAULT_WIDTH, DEFAULT_HEIGHT, DPI_RATIO
+from config import (
+    DEFAULT_WIDTH, DEFAULT_HEIGHT, DPI_RATIO,
+    PRINT_MARGIN,
+    TYPE1_FONT_HEIGHT, TYPE1_FONT_NAME,
+    TYPE2_FONT_HEIGHT, TYPE2_FONT_NAME, TYPE2_QR_SIZE, TYPE2_QR_SPACING
+)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -181,13 +186,13 @@ def print_type1(
         width_dots = int(float(width) * DPI_RATIO)
         height_dots = int(float(height) * DPI_RATIO)
         
-        # 有效打印区域（保留10 dots边距）
-        margin = 10
+        # 有效打印区域（使用统一的边距配置）
+        margin = PRINT_MARGIN
         effective_width = width_dots - 2 * margin
         effective_height = height_dots - 2 * margin
         
-        # 字体大小
-        font_height = 56
+        # 字体大小（使用统一的配置）
+        font_height = TYPE1_FONT_HEIGHT
         
         # 每两个文本为一组，打印在一张纸上（上下两行）
         for i in range(0, len(text_list), 2):
@@ -209,7 +214,7 @@ def print_type1(
                 rotation=0,
                 font_style=0,
                 font_underline=0,
-                font_face_name="宋体",
+                font_face_name=TYPE1_FONT_NAME,
                 text=first_text
             )
             
@@ -229,7 +234,7 @@ def print_type1(
                     rotation=0,
                     font_style=0,
                     font_underline=0,
-                    font_face_name="宋体",
+                    font_face_name=TYPE1_FONT_NAME,
                     text=second_text
                 )
             
@@ -298,13 +303,13 @@ def print_type2(
         width_dots = int(float(width) * DPI_RATIO)
         height_dots = int(float(height) * DPI_RATIO)
         
-        # 有效打印区域（保留10 dots边距）
-        margin = 10
+        # 有效打印区域（使用统一的边距配置）
+        margin = PRINT_MARGIN
         effective_width = width_dots - 2 * margin
         effective_height = height_dots - 2 * margin
         
-        # 字体大小
-        font_height = 48
+        # 字体大小（使用统一的配置）
+        font_height = TYPE2_FONT_HEIGHT
         
         # 估算二维码尺寸（二维码通常是30-35个模块）
         qr_modules = 33  # 中等复杂度二维码的模块数
@@ -313,8 +318,8 @@ def print_type2(
         # 估算文本宽度
         text_width = _estimate_text_width(text, font_height)
         
-        # 二维码和文本之间的间距（增加到60 dots，约5mm）
-        spacing = 60
+        # 二维码和文本之间的间距（使用统一的配置）
+        spacing = TYPE2_QR_SPACING
         
         # 计算整体高度（二维码 + 间距 + 文本）
         total_height = qr_pixel_size + spacing + font_height
@@ -341,7 +346,7 @@ def print_type2(
             rotation=0,
             font_style=0,
             font_underline=0,
-            font_face_name="宋体",
+            font_face_name=TYPE2_FONT_NAME,
             text=text
         )
         
@@ -443,10 +448,11 @@ def print_calibration_border(
         
         logging.info(f"打印区域: {width}mm × {height}mm = {width_dots} × {height_dots} dots (DPI比例: {DPI_RATIO})")
         
-        # 打印外边框（矩形）
+        # 打印外边框（矩形）- 使用统一的边距配置
         # BOX x_start, y_start, x_end, y_end, line_thickness
         border_thickness = 3
-        p.send_command(f"BOX 10,10,{width_dots-10},{height_dots-10},{border_thickness}")
+        margin = PRINT_MARGIN
+        p.send_command(f"BOX {margin},{margin},{width_dots-margin},{height_dots-margin},{border_thickness}")
         
         # 打印四个角的标记文字
         # 左上角

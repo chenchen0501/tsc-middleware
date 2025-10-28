@@ -14,6 +14,18 @@ DEFAULT_HEIGHT = "80"   # 标签高度(mm) - 8cm
 #   - TTP-644 (600 DPI): 23.62 dots/mm
 DPI_RATIO = 11.81  # dots per mm (TTE-344 = 300 DPI)
 
+# 打印样式参数
+PRINT_MARGIN = 10  # 打印边距 (dots)，与边框测试保持一致
+
+# Type 1 参数（批量纯文本打印）
+TYPE1_FONT_HEIGHT = 56  # 字体高度 (dots)
+TYPE1_FONT_NAME = "宋体"  # 字体名称
+
+# Type 2 参数（二维码+文本打印）
+TYPE2_FONT_HEIGHT = 48  # 字体高度 (dots)
+TYPE2_FONT_NAME = "宋体"  # 字体名称
+TYPE2_QR_SIZE = 8  # 二维码单元宽度 (1-10)
+TYPE2_QR_SPACING = 60  # 二维码与文本间距 (dots)，约5mm
 
 # 注意：已改为USB连接模式，无需配置IP地址
 

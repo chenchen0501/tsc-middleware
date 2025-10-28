@@ -7,7 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
 from printer import print_type1, print_type2
-from config import DEFAULT_WIDTH, DEFAULT_HEIGHT
+from config import (
+    DEFAULT_WIDTH, DEFAULT_HEIGHT,
+    TYPE1_FONT_HEIGHT, TYPE2_FONT_HEIGHT, TYPE2_QR_SIZE, TYPE2_QR_SPACING
+)
 
 app = FastAPI(
     title="TSC-Print-Service",
@@ -76,15 +79,25 @@ def api_print(job: UnifiedPrintJob):
     根据 type 参数选择不同的打印模式：
     
     **type = 1: 批量纯文本打印**
-    - 每张纸上下两行打印两个标签
+    - 每张纸上下两行打印两个标签，每行水平垂直居中
     - print_list中每个对象只需要 text 字段
     - 示例: 传入3个文本，会打印2张纸（第1张有2个标签，第2张有1个标签）
-    - 固定参数: width=100mm, height=80mm
+    - 固定参数:
+        * 纸张尺寸: 100mm × 80mm
+        * 字体: 宋体 56点
+        * 边距: 10 dots (约0.85mm)
+        * 布局: 上下两行分别居中
     
     **type = 2: 批量二维码+文本打印**
-    - 每个二维码独占一张纸
+    - 每个二维码独占一张纸，整体水平垂直居中
     - print_list中每个对象需要 text 和 qr_content 字段
-    - 固定参数: width=100mm, height=80mm, qr_size=8
+    - 固定参数:
+        * 纸张尺寸: 100mm × 80mm
+        * 字体: 宋体 48点
+        * 二维码大小: 8 (单元宽度)
+        * 二维码与文本间距: 60 dots (约5mm)
+        * 边距: 10 dots (约0.85mm)
+        * 布局: 二维码和文本整体居中
     """
     try:
         # 验证print_list不为空
@@ -132,7 +145,7 @@ def api_print(job: UnifiedPrintJob):
                     qty=1,  # 固定每次打印1张
                     width=DEFAULT_WIDTH,  # 固定100mm
                     height=DEFAULT_HEIGHT,  # 固定80mm
-                    qr_size=8  # 固定二维码大小为8
+                    qr_size=TYPE2_QR_SIZE  # 使用配置的二维码大小
                 )
             
             return {
