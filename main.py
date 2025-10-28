@@ -3,6 +3,7 @@ TSC打印服务 - FastAPI入口
 提供HTTP接口控制TSC打印机（USB模式）
 """
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
 from printer import print_batch_labels, print_qrcode_with_text
@@ -12,6 +13,15 @@ app = FastAPI(
     title="TSC-Print-Service",
     version="3.0.0",
     description="零驱动USB打印中间件 | Windows部署 | USB连接模式 | 纸张: 10cm×8cm"
+)
+
+# 配置CORS中间件，支持跨域访问
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有源访问，生产环境建议指定具体域名
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有请求头
 )
 
 

@@ -20,6 +20,7 @@
 - **默认端口**: 8000
 - **纸张规格**: 10cm × 8cm (100mm × 80mm)
 - **连接方式**: USB（不使用网络 IP）
+- **跨域支持**: 已启用 CORS，支持所有源访问
 - **API 文档**: http://localhost:8000/docs (Swagger UI)
 
 ---
@@ -376,6 +377,11 @@ batchQrcodePrint();
 7. **type=2 批量打印**: 每个二维码+文本独占一张纸，适合需要单独撕下的场景
 
 8. **参数结构**: 统一使用 `list` 数组，每个元素都是对象，包含 `text` 字段（type=2 还需要 `qr_content` 字段）
+
+9. **跨域访问（CORS）**:
+   - 已启用 CORS 中间件，允许所有源（`*`）访问
+   - 生产环境建议在 `main.py` 中修改 `allow_origins` 为具体的前端域名
+   - 示例：`allow_origins=["https://yourdomain.com", "http://localhost:3000"]`
 
 ---
 
