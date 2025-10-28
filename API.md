@@ -6,11 +6,8 @@
 - [基础接口](#基础接口)
   - [获取服务信息](#获取服务信息)
   - [健康检查](#健康检查)
-  - [测试打印机连接](#测试打印机连接)
 - [打印接口](#打印接口)
-  - [打印文本标签](#打印文本标签)
-  - [打印二维码标签](#打印二维码标签)
-  - [批量打印标签](#批量打印标签)
+  - [统一打印接口](#统一打印接口)
 - [错误码说明](#错误码说明)
 
 ---
@@ -18,10 +15,11 @@
 ## 服务信息
 
 - **服务名称**: TSC-Print-Service
-- **版本**: 1.0.0
-- **描述**: 零驱动局域网打印中间件 | macOS 开发 ➜ Windows 部署
+- **版本**: 3.0.0
+- **描述**: 零驱动 USB 打印中间件 | Windows 部署 | USB 连接模式
 - **默认端口**: 8000
-- **默认打印机 IP**: 192.168.1.100（可在 config.py 或环境变量中修改）
+- **纸张规格**: 10cm × 8cm (100mm × 80mm)
+- **连接方式**: USB（不使用网络 IP）
 - **API 文档**: http://localhost:8000/docs (Swagger UI)
 
 ---
@@ -43,7 +41,8 @@ GET /
 ```json
 {
   "service": "TSC-Print-Service",
-  "version": "1.0.0",
+  "version": "3.0.0",
+  "mode": "USB",
   "docs": "/docs",
   "health": "/health"
 }
@@ -72,64 +71,11 @@ GET /health
 
 ---
 
-### 测试打印机连接
-
-测试与指定打印机的网络连接
-
-**请求**
-
-```
-POST /test
-Content-Type: application/json
-```
-
-**请求参数**
-
-| 参数名 | 类型   | 必填 | 默认值        | 说明                   | 示例            |
-| ------ | ------ | ---- | ------------- | ---------------------- | --------------- |
-| ip     | string | 否   | 配置的默认 IP | 打印机 IP 地址（可选） | "192.168.1.100" |
-
-**请求示例 1：使用默认 IP**
-
-```json
-{}
-```
-
-**请求示例 2：指定 IP**
-
-```json
-{
-  "ip": "192.168.1.100"
-}
-```
-
-**成功响应**
-
-```json
-{
-  "status": "ok",
-  "message": "打印机 192.168.1.100 连接正常"
-}
-```
-
-**失败响应**
-
-- **状态码**: 503 (Service Unavailable)
-- **响应体**:
-
-```json
-{
-  "detail": "无法连接到打印机 192.168.1.100"
-}
-```
-
----
-
 ## 打印接口
 
-### 打印文本标签
+### 统一打印接口
 
-打印包含文字和条形码的标签（条形码可选）
+通过 `type` 参数区分不同的打印模式，所有打印任务都通过此接口完成。
 
 **请求**
 
@@ -138,186 +84,132 @@ POST /print
 Content-Type: application/json
 ```
 
-**请求参数**
+**打印类型说明**
 
-| 参数名  | 类型    | 必填 | 默认值        | 说明                           | 示例                           |
-| ------- | ------- | ---- | ------------- | ------------------------------ | ------------------------------ |
-| ip      | string  | 否   | 配置的默认 IP | 打印机 IP 地址（可选）         | "192.168.1.100"                |
-| text    | string  | 是   | -             | 标签文本内容（支持中文）       | "cc 测试拆箱物料 1\_盖子\_1_1" |
-| barcode | string  | 否   | ""            | 条形码内容（不传则不打印条码） | "1234567890"                   |
-| qty     | integer | 否   | 1             | 打印数量（1-100）              | 1                              |
-| width   | string  | 否   | "100"         | 标签宽度(mm)                   | "100"                          |
-| height  | string  | 否   | "90"          | 标签高度(mm)                   | "90"                           |
+| type | 名称                | 说明                       |
+| ---- | ------------------- | -------------------------- |
+| 1    | 批量纯文本打印      | 每张纸上下两行打印两个标签 |
+| 2    | 批量二维码+文本打印 | 每个二维码独占一张纸       |
 
-**请求示例 1：使用默认 IP，只打印文字**
+**通用参数说明**
 
-```json
-{
-  "text": "cc测试拆箱物料1_盖子_1_1"
-}
-```
+| 参数名 | 类型          | 必填 | 说明                                           |
+| ------ | ------------- | ---- | ---------------------------------------------- |
+| type   | integer       | 是   | 打印类型：1=纯文本批量, 2=二维码批量           |
+| list   | array[object] | 是   | 打印项列表，每个对象包含 text（和 qr_content） |
 
-**请求示例 2：指定 IP，打印文字+条形码**
-
-```json
-{
-  "ip": "192.168.1.100",
-  "text": "产品编号：12345",
-  "barcode": "1234567890",
-  "qty": 2
-}
-```
-
-**成功响应**
-
-```json
-{
-  "status": "ok",
-  "message": "成功发送1张标签到打印机 192.168.1.100"
-}
-```
-
-**失败响应**
-
-- **状态码**: 500 (Internal Server Error)
-- **响应体**:
-
-```json
-{
-  "detail": "打印失败: [具体错误信息]"
-}
-```
+**重要提示**：所有打印参数（width、height、qr_size）已根据 type 固定，用户无需传递。
 
 ---
 
-### 打印二维码标签
+#### Type 1: 批量纯文本打印
 
-打印包含二维码的标签
+每张纸上下两行打印两个标签
 
-**请求**
+**list 对象结构**
 
-```
-POST /print/qrcode
-Content-Type: application/json
-```
-
-**请求参数**
-
-| 参数名  | 类型    | 必填 | 默认值        | 说明                     | 示例                      |
-| ------- | ------- | ---- | ------------- | ------------------------ | ------------------------- |
-| ip      | string  | 否   | 配置的默认 IP | 打印机 IP 地址（可选）   | "192.168.1.100"           |
-| content | string  | 是   | -             | 二维码内容（URL 或文本） | "https://www.example.com" |
-| text    | string  | 否   | ""            | 标签附加文本（可选）     | "扫码访问"                |
-| qty     | integer | 否   | 1             | 打印数量（1-100）        | 1                         |
-| width   | string  | 否   | "100"         | 标签宽度(mm)             | "100"                     |
-| height  | string  | 否   | "90"          | 标签高度(mm)             | "90"                      |
-| qr_size | integer | 否   | 8             | 二维码大小（1-10）       | 8                         |
+| 字段名 | 类型   | 必填 | 说明     | 示例     |
+| ------ | ------ | ---- | -------- | -------- |
+| text   | string | 是   | 文本内容 | "物料 1" |
 
 **请求示例**
 
 ```json
 {
-  "content": "https://www.example.com",
-  "text": "扫码访问官网",
-  "qty": 1,
-  "qr_size": 8
-}
-```
-
-**成功响应**
-
-```json
-{
-  "status": "ok",
-  "message": "成功发送1张二维码标签到打印机 192.168.1.100"
-}
-```
-
-**失败响应**
-
-- **状态码**: 500 (Internal Server Error)
-- **响应体**:
-
-```json
-{
-  "detail": "打印失败: [具体错误信息]"
-}
-```
-
----
-
-### 批量打印标签
-
-批量打印多个文本标签，每张纸上下两行打印两个标签
-
-**特点**：
-
-- 10cm × 9cm 纸张
-- 每张纸上下排列打印两个标签
-- 自动分组：每两个文本为一组打印在同一张纸上
-- 如果是奇数个标签，最后一张纸只打印一个
-
-**请求**
-
-```
-POST /print/batch
-Content-Type: application/json
-```
-
-**请求参数**
-
-| 参数名    | 类型          | 必填 | 默认值        | 说明                   | 示例            |
-| --------- | ------------- | ---- | ------------- | ---------------------- | --------------- |
-| ip        | string        | 否   | 配置的默认 IP | 打印机 IP 地址（可选） | "192.168.1.100" |
-| text_list | array[string] | 是   | -             | 要打印的文本列表       | 见下方示例      |
-| width     | string        | 否   | "100"         | 标签宽度(mm)           | "100"           |
-| height    | string        | 否   | "90"          | 标签高度(mm)           | "90"            |
-
-**请求示例**
-
-```json
-{
-  "text_list": [
-    "cc测试拆箱物料1_盖子_1_1",
-    "cc测试拆箱物料2_底座_1_2",
-    "cc测试拆箱物料3_配件_1_3",
-    "cc测试拆箱物料4_螺丝_1_4",
-    "cc测试拆箱物料5_垫片_1_5"
+  "type": 1,
+  "list": [
+    { "text": "cc测试拆箱物料1_盖子_1_1" },
+    { "text": "cc测试拆箱物料2_底座_1_2" },
+    { "text": "cc测试拆箱物料3_配件_1_3" }
   ]
 }
 ```
 
 **打印说明**：
 
-- 上述 5 个文本会打印在 3 张纸上
+- 上述 3 个文本会打印在 2 张纸上
   - 第 1 张纸：上方"物料 1"，下方"物料 2"
-  - 第 2 张纸：上方"物料 3"，下方"物料 4"
-  - 第 3 张纸：上方"物料 5"
+  - 第 2 张纸：上方"物料 3"
+- 固定参数：width=100mm, height=80mm
 
 **成功响应**
 
 ```json
 {
   "status": "ok",
-  "message": "成功发送5个标签（共3张纸）到打印机 192.168.1.100"
+  "message": "批量打印成功：3个标签（共2张纸）"
 }
 ```
 
 **失败响应**
 
-- **状态码**: 400 (Bad Request) - 文本列表为空
+- **状态码**: 400 (Bad Request) - 参数错误
 
 ```json
 {
-  "detail": "文本列表不能为空"
+  "detail": "list参数不能为空"
 }
 ```
 
-- **状态码**: 500 (Internal Server Error) - 打印失败
+---
+
+#### Type 2: 批量二维码+文本打印
+
+每个二维码独占一张纸
+
+**list 对象结构**
+
+| 字段名     | 类型   | 必填 | 说明                     | 示例                                     |
+| ---------- | ------ | ---- | ------------------------ | ---------------------------------------- |
+| text       | string | 是   | 文本内容                 | "Product-ABC123-2024"                    |
+| qr_content | string | 是   | 二维码内容（URL 或文本） | "https://www.example.com/product/ABC123" |
+
+**请求示例**
 
 ```json
 {
-  "detail": "批量打印失败: [具体错误信息]"
+  "type": 2,
+  "list": [
+    {
+      "text": "Product-ABC123-2024",
+      "qr_content": "https://www.example.com/product/ABC123"
+    },
+    {
+      "text": "Product-DEF456-2024",
+      "qr_content": "https://www.example.com/product/DEF456"
+    }
+  ]
+}
+```
+
+**打印说明**：
+
+- 每个二维码+文本独占一张纸
+- 上述 2 个对象会打印 2 张纸
+- 固定参数：width=100mm, height=80mm, qr_size=8
+
+**成功响应**
+
+```json
+{
+  "status": "ok",
+  "message": "二维码批量打印成功：2张标签"
+}
+```
+
+**失败响应**
+
+- **状态码**: 400 (Bad Request) - 参数错误
+
+```json
+{
+  "detail": "list参数不能为空"
+}
+```
+
+```json
+{
+  "detail": "type=2时，list中第1个对象的qr_content不能为空"
 }
 ```
 
@@ -325,12 +217,11 @@ Content-Type: application/json
 
 ## 错误码说明
 
-| HTTP 状态码 | 说明       | 可能原因                           |
-| ----------- | ---------- | ---------------------------------- |
-| 200         | 成功       | 请求处理成功                       |
-| 400         | 请求错误   | 参数验证失败、文本列表为空等       |
-| 500         | 服务器错误 | 打印机通信失败、打印命令执行失败等 |
-| 503         | 服务不可用 | 无法连接到打印机                   |
+| HTTP 状态码 | 说明       | 可能原因                                    |
+| ----------- | ---------- | ------------------------------------------- |
+| 200         | 成功       | 请求处理成功                                |
+| 400         | 请求错误   | type 参数错误、必需参数缺失、参数验证失败等 |
+| 500         | 服务器错误 | 打印机 USB 连接失败、打印命令执行失败等     |
 
 ---
 
@@ -344,32 +235,38 @@ import requests
 # 服务地址
 BASE_URL = "http://localhost:8000"
 
-# 1. 测试连接（使用默认IP）
-response = requests.post(f"{BASE_URL}/test", json={})
+# 1. 健康检查
+response = requests.get(f"{BASE_URL}/health")
 print(response.json())
 
-# 2. 打印文本标签（使用默认IP）
+# 2. 批量纯文本打印（type=1）
 response = requests.post(f"{BASE_URL}/print", json={
-    "text": "cc测试拆箱物料1_盖子_1_1"
-})
-print(response.json())
-
-# 3. 批量打印（使用默认IP）
-response = requests.post(f"{BASE_URL}/print/batch", json={
-    "text_list": [
-        "cc测试拆箱物料1_盖子_1_1",
-        "cc测试拆箱物料2_底座_1_2",
-        "cc测试拆箱物料3_配件_1_3"
+    "type": 1,
+    "list": [
+        {"text": "cc测试拆箱物料1_盖子_1_1"},
+        {"text": "cc测试拆箱物料2_底座_1_2"},
+        {"text": "cc测试拆箱物料3_配件_1_3"}
     ]
 })
 print(response.json())
+# 输出: {"status": "ok", "message": "批量打印成功：3个标签（共2张纸）"}
 
-# 4. 指定IP打印
+# 3. 批量二维码+文本打印（type=2）
 response = requests.post(f"{BASE_URL}/print", json={
-    "ip": "192.168.1.200",  # 使用不同的打印机
-    "text": "特殊打印机标签"
+    "type": 2,
+    "list": [
+        {
+            "text": "Product-ABC123-2024",
+            "qr_content": "https://www.example.com/product/ABC123"
+        },
+        {
+            "text": "Product-DEF456-2024",
+            "qr_content": "https://www.example.com/product/DEF456"
+        }
+    ]
 })
 print(response.json())
+# 输出: {"status": "ok", "message": "二维码批量打印成功：2张标签"}
 ```
 
 ### cURL 示例
@@ -378,25 +275,31 @@ print(response.json())
 # 1. 健康检查
 curl http://localhost:8000/health
 
-# 2. 测试连接（使用默认IP）
-curl -X POST http://localhost:8000/test \
-  -H "Content-Type: application/json" \
-  -d '{}'
-
-# 3. 打印文本标签（使用默认IP）
+# 2. 批量纯文本打印（type=1）
 curl -X POST http://localhost:8000/print \
   -H "Content-Type: application/json" \
   -d '{
-    "text": "cc测试拆箱物料1_盖子_1_1"
+    "type": 1,
+    "list": [
+      {"text": "cc测试拆箱物料1_盖子_1_1"},
+      {"text": "cc测试拆箱物料2_底座_1_2"}
+    ]
   }'
 
-# 4. 批量打印（使用默认IP）
-curl -X POST http://localhost:8000/print/batch \
+# 3. 批量二维码+文本打印（type=2）
+curl -X POST http://localhost:8000/print \
   -H "Content-Type: application/json" \
   -d '{
-    "text_list": [
-      "cc测试拆箱物料1_盖子_1_1",
-      "cc测试拆箱物料2_底座_1_2"
+    "type": 2,
+    "list": [
+      {
+        "text": "Product-ABC123-2024",
+        "qr_content": "https://www.example.com/product/ABC123"
+      },
+      {
+        "text": "Product-DEF456-2024",
+        "qr_content": "https://www.example.com/product/DEF456"
+      }
     ]
   }'
 ```
@@ -408,14 +311,15 @@ const axios = require("axios");
 
 const BASE_URL = "http://localhost:8000";
 
-// 批量打印（使用默认IP）
-async function batchPrint() {
+// 批量纯文本打印（type=1）
+async function batchTextPrint() {
   try {
-    const response = await axios.post(`${BASE_URL}/print/batch`, {
-      text_list: [
-        "cc测试拆箱物料1_盖子_1_1",
-        "cc测试拆箱物料2_底座_1_2",
-        "cc测试拆箱物料3_配件_1_3",
+    const response = await axios.post(`${BASE_URL}/print`, {
+      type: 1,
+      list: [
+        { text: "cc测试拆箱物料1_盖子_1_1" },
+        { text: "cc测试拆箱物料2_底座_1_2" },
+        { text: "cc测试拆箱物料3_配件_1_3" },
       ],
     });
     console.log(response.data);
@@ -424,11 +328,21 @@ async function batchPrint() {
   }
 }
 
-// 打印单个标签（使用默认IP）
-async function printLabel() {
+// 批量二维码+文本打印（type=2）
+async function batchQrcodePrint() {
   try {
     const response = await axios.post(`${BASE_URL}/print`, {
-      text: "cc测试拆箱物料1_盖子_1_1",
+      type: 2,
+      list: [
+        {
+          text: "Product-ABC123-2024",
+          qr_content: "https://www.example.com/product/ABC123",
+        },
+        {
+          text: "Product-DEF456-2024",
+          qr_content: "https://www.example.com/product/DEF456",
+        },
+      ],
     });
     console.log(response.data);
   } catch (error) {
@@ -436,32 +350,32 @@ async function printLabel() {
   }
 }
 
-batchPrint();
-printLabel();
+batchTextPrint();
+batchQrcodePrint();
 ```
 
 ---
 
 ## 注意事项
 
-1. **打印机 IP 配置**:
+1. **连接方式**: 使用 USB 连接打印机，不需要配置网络 IP 地址
 
-   - 默认打印机 IP 为 `192.168.1.100`
-   - 可以通过修改 `config.py` 文件中的 `PRINTER_IP` 来更改默认 IP
-   - 也可以通过环境变量 `PRINTER_IP` 设置，例如：`export PRINTER_IP=192.168.1.200`
-   - API 调用时可以传入 `ip` 参数临时覆盖默认 IP
+2. **打印机型号**: TTE-344 (300 DPI)
 
-2. **网络连接**: 确保打印机和服务器在同一局域网内
-
-3. **打印机端口**: TSC 打印机默认使用 9100 端口
+3. **纸张规格**: 10cm × 8cm (100mm × 80mm)
 
 4. **中文支持**: 使用 Windows 系统字体（宋体）打印中文
 
-5. **字体大小**: 当前字体高度为 56 点，可根据需要调整
+5. **固定参数**: 所有打印参数已根据 type 固定，用户无需传递
 
-6. **标签尺寸**: 默认 100mm × 90mm，可根据实际标签纸调整
+   - type=1: width=100mm, height=80mm
+   - type=2: width=100mm, height=80mm, qr_size=8
 
-7. **批量打印**: 自动将文本列表分组，每两个文本打印在一张纸上
+6. **type=1 批量打印**: 自动将文本列表分组，每两个文本打印在一张纸的上下两行
+
+7. **type=2 批量打印**: 每个二维码+文本独占一张纸，适合需要单独撕下的场景
+
+8. **参数结构**: 统一使用 `list` 数组，每个元素都是对象，包含 `text` 字段（type=2 还需要 `qr_content` 字段）
 
 ---
 

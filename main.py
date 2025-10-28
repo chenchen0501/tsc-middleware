@@ -4,44 +4,40 @@ TSC打印服务 - FastAPI入口
 """
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from printer import print_label, print_qrcode, test_connection, print_batch_labels
+from typing import Optional
+from printer import print_batch_labels, print_qrcode_with_text
 from config import DEFAULT_WIDTH, DEFAULT_HEIGHT
 
 app = FastAPI(
     title="TSC-Print-Service",
-    version="2.0.0",
-    description="零驱动USB打印中间件 | macOS开发 ➜ Windows部署 | USB连接模式 | 纸张: 10cm×8cm"
+    version="3.0.0",
+    description="零驱动USB打印中间件 | Windows部署 | USB连接模式 | 纸张: 10cm×8cm"
 )
 
 
-class PrintJob(BaseModel):
-    """打印任务模型（USB模式，纸张区域10cm×8cm）"""
-    text: str = Field(..., description="标签文本", json_schema_extra={"example": "Hello TSC USB"})
-    barcode: str = Field("", description="条形码内容（可选）", json_schema_extra={"example": "1234567890"})
-    qty: int = Field(1, ge=1, le=100, description="打印数量")
-    width: str = Field(DEFAULT_WIDTH, description="标签宽度(mm)", json_schema_extra={"example": "100"})
-    height: str = Field(DEFAULT_HEIGHT, description="标签高度(mm)", json_schema_extra={"example": "80"})
+class PrintItem(BaseModel):
+    """
+    打印项模型
+    
+    - type=1（纯文本）只需要 text 字段
+    - type=2（二维码+文本）需要 text 和 qr_content 字段
+    """
+    text: str = Field(..., description="文本内容", json_schema_extra={"example": "产品名称"})
+    qr_content: Optional[str] = Field(None, description="二维码内容（仅type=2需要）", json_schema_extra={"example": "https://www.example.com/product/123"})
 
 
-class QRCodeJob(BaseModel):
-    """二维码打印任务模型（USB模式，纸张区域10cm×8cm）"""
-    content: str = Field(..., description="二维码内容", json_schema_extra={"example": "https://www.example.com"})
-    text: str = Field("", description="标签文本（可选）")
-    qty: int = Field(1, ge=1, le=100, description="打印数量")
-    width: str = Field(DEFAULT_WIDTH, description="标签宽度(mm)", json_schema_extra={"example": "100"})
-    height: str = Field(DEFAULT_HEIGHT, description="标签高度(mm)", json_schema_extra={"example": "80"})
-    qr_size: int = Field(8, ge=1, le=10, description="二维码大小(1-10)")
-
-
-class BatchPrintJob(BaseModel):
-    """批量打印任务模型（USB模式，纸张区域10cm×8cm）"""
-    text_list: list[str] = Field(
-        ..., 
-        description="要打印的文本列表", 
-        json_schema_extra={"example": ["cc测试拆箱物料1_盖子_1_1", "cc测试拆箱物料2_底座_1_2", "cc测试拆箱物料3_配件_1_3"]}
-    )
-    width: str = Field(DEFAULT_WIDTH, description="标签宽度(mm)", json_schema_extra={"example": "100"})
-    height: str = Field(DEFAULT_HEIGHT, description="标签高度(mm)", json_schema_extra={"example": "80"})
+class UnifiedPrintJob(BaseModel):
+    """
+    统一打印任务模型（USB模式，纸张区域10cm×8cm）
+    
+    支持的打印类型（type）：
+    - 1: 批量纯文本打印，每张纸上下两行打印两个标签
+    - 2: 批量二维码+文本打印，每个二维码独占一张纸
+    
+    所有打印参数（width、height、qr_size等）根据type固定，用户无需传递
+    """
+    type: int = Field(..., description="打印类型: 1=纯文本批量打印（每张纸两个）, 2=二维码+文本批量打印（每个独占一张）", json_schema_extra={"example": 1})
+    list: list[PrintItem] = Field(..., description="打印项列表", json_schema_extra={"example": [{"text": "物料1"}, {"text": "物料2"}]})
 
 
 @app.get("/")
@@ -49,7 +45,7 @@ def root():
     """根路径"""
     return {
         "service": "TSC-Print-Service",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "mode": "USB",
         "docs": "/docs",
         "health": "/health"
@@ -63,130 +59,90 @@ def health():
 
 
 @app.post("/print")
-def api_print(job: PrintJob):
+def api_print(job: UnifiedPrintJob):
     """
-    打印标签（USB模式）
+    统一打印接口（USB模式）
     
-    - **text**: 标签上的文本内容
-    - **barcode**: 条形码数据（可选）
-    - **qty**: 打印数量（1-100）
-    - **width**: 标签宽度，单位mm（默认100）
-    - **height**: 标签高度，单位mm（默认90）
+    根据 type 参数选择不同的打印模式：
+    
+    **type = 1: 批量纯文本打印**
+    - 每张纸上下两行打印两个标签
+    - list中每个对象只需要 text 字段
+    - 示例: 传入3个文本，会打印2张纸（第1张有2个标签，第2张有1个标签）
+    - 固定参数: width=100mm, height=80mm
+    
+    **type = 2: 批量二维码+文本打印**
+    - 每个二维码独占一张纸
+    - list中每个对象需要 text 和 qr_content 字段
+    - 固定参数: width=100mm, height=80mm, qr_size=8
     """
     try:
-        print_label(
-            text=job.text,
-            barcode=job.barcode,
-            qty=job.qty,
-            width=job.width,
-            height=job.height
-        )
-        return {
-            "status": "ok",
-            "message": f"成功发送{job.qty}张标签到USB打印机"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"打印失败: {str(e)}"
-        )
-
-
-@app.post("/print/qrcode")
-def api_print_qrcode(job: QRCodeJob):
-    """
-    打印二维码标签（USB模式）
-    
-    - **content**: 二维码内容（URL或文本）
-    - **text**: 标签文本（可选）
-    - **qty**: 打印数量（1-100）
-    - **width**: 标签宽度，单位mm（默认100）
-    - **height**: 标签高度，单位mm（默认90）
-    - **qr_size**: 二维码大小（1-10，默认8）
-    """
-    try:
-        print_qrcode(
-            content=job.content,
-            text=job.text,
-            qty=job.qty,
-            width=job.width,
-            height=job.height,
-            qr_size=job.qr_size
-        )
-        return {
-            "status": "ok",
-            "message": f"成功发送{job.qty}张二维码标签到USB打印机"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"打印失败: {str(e)}"
-        )
-
-
-@app.post("/print/batch")
-def api_print_batch(job: BatchPrintJob):
-    """
-    批量打印标签（USB模式，每张纸上下两行打印两个标签）
-    
-    - **text_list**: 要打印的文本列表，每两个文本打印在一张纸的上下两行
-    - **width**: 标签宽度，单位mm（默认100）
-    - **height**: 标签高度，单位mm（默认90）
-    
-    示例：传入3个文本，会打印2张纸（第1张有2个标签，第2张有1个标签）
-    """
-    try:
-        if not job.text_list:
+        # 验证list不为空
+        if not job.list:
             raise HTTPException(
                 status_code=400,
-                detail="文本列表不能为空"
+                detail="list参数不能为空"
             )
         
-        print_batch_labels(
-            text_list=job.text_list,
-            width=job.width,
-            height=job.height
-        )
-        
-        # 计算打印张数
-        sheets = (len(job.text_list) + 1) // 2
-        
-        return {
-            "status": "ok",
-            "message": f"成功发送{len(job.text_list)}个标签（共{sheets}张纸）到USB打印机"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"批量打印失败: {str(e)}"
-        )
-
-
-@app.post("/test")
-def api_test_connection():
-    """
-    测试USB打印机连接
-    """
-    try:
-        is_connected = test_connection()
-        if is_connected:
+        # type = 1: 批量纯文本打印，每张纸两行
+        if job.type == 1:
+            # 提取文本列表
+            text_list = [item.text for item in job.list]
+            
+            # 调用批量打印服务（固定参数）
+            print_batch_labels(
+                text_list=text_list,
+                width=DEFAULT_WIDTH,
+                height=DEFAULT_HEIGHT
+            )
+            
+            # 计算打印张数
+            sheets = (len(text_list) + 1) // 2
+            
             return {
                 "status": "ok",
-                "message": "USB打印机连接正常"
+                "message": f"批量打印成功：{len(text_list)}个标签（共{sheets}张纸）"
             }
+        
+        # type = 2: 批量二维码+文本打印，每个独占一张纸
+        elif job.type == 2:
+            # 验证每个item都有qr_content
+            for i, item in enumerate(job.list):
+                if not item.qr_content:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"type=2时，list中第{i+1}个对象的qr_content不能为空"
+                    )
+            
+            # 批量打印二维码（每个独占一张）
+            for item in job.list:
+                print_qrcode_with_text(
+                    qr_content=item.qr_content,
+                    text=item.text,
+                    qty=1,  # 固定每次打印1张
+                    width=DEFAULT_WIDTH,  # 固定100mm
+                    height=DEFAULT_HEIGHT,  # 固定80mm
+                    qr_size=8  # 固定二维码大小为8
+                )
+            
+            return {
+                "status": "ok",
+                "message": f"二维码批量打印成功：{len(job.list)}张标签"
+            }
+        
+        # 不支持的type
         else:
             raise HTTPException(
-                status_code=503,
-                detail="无法连接到USB打印机"
+                status_code=400,
+                detail=f"不支持的打印类型: type={job.type}，目前仅支持 1（纯文本批量） 和 2（二维码批量）"
             )
+    
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"连接测试失败: {str(e)}"
+            detail=f"打印失败: {str(e)}"
         )
 
 
