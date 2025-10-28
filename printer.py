@@ -10,6 +10,29 @@ from config import DEFAULT_WIDTH, DEFAULT_HEIGHT, DPI_RATIO
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
+def _estimate_text_width(text: str, font_height: int) -> int:
+    """
+    估算文本打印宽度（单位：dots）
+    
+    Args:
+        text: 文本内容
+        font_height: 字体高度（点）
+        
+    Returns:
+        估算的文本宽度（dots）
+    """
+    width = 0
+    for char in text:
+        # 判断是否为中文字符（包括中文标点）
+        if '\u4e00' <= char <= '\u9fff' or '\u3000' <= char <= '\u303f':
+            # 中文字符宽度约等于字体高度
+            width += font_height
+        else:
+            # 英文、数字、符号宽度约为字体高度的 0.6 倍
+            width += int(font_height * 0.6)
+    return width
+
+
 def _init_printer_settings(printer: TSCPrinter, width: str, height: str):
     """
     初始化打印机设置
@@ -154,17 +177,35 @@ def print_type1(
         logging.info("使用 USB 连接打印机...")
         p.open_port(0)
         
+        # 计算打印区域尺寸（与 print_calibration_border 保持一致）
+        width_dots = int(float(width) * DPI_RATIO)
+        height_dots = int(float(height) * DPI_RATIO)
+        
+        # 有效打印区域（保留10 dots边距）
+        margin = 10
+        effective_width = width_dots - 2 * margin
+        effective_height = height_dots - 2 * margin
+        
+        # 字体大小
+        font_height = 56
+        
         # 每两个文本为一组，打印在一张纸上（上下两行）
         for i in range(0, len(text_list), 2):
             # 初始化打印机设置
             _init_printer_settings(p, width, height)
             
-            # 打印第一行（上方）- 使用Windows字体支持中文
+            # 打印第一行（上半部分居中）
             first_text = text_list[i]
+            text1_width = _estimate_text_width(first_text, font_height)
+            
+            # 上半部分水平垂直居中
+            x1 = margin + (effective_width - text1_width) // 2
+            y1 = margin + (effective_height // 2 - font_height) // 2
+            
             p.print_text_windows_font(
-                x=50,
-                y=80,
-                font_height=56,  # 增大字体
+                x=x1,
+                y=y1,
+                font_height=font_height,
                 rotation=0,
                 font_style=0,
                 font_underline=0,
@@ -172,13 +213,19 @@ def print_type1(
                 text=first_text
             )
             
-            # 打印第二行（下方，如果存在）
+            # 打印第二行（下半部分居中，如果存在）
             if i + 1 < len(text_list):
                 second_text = text_list[i + 1]
+                text2_width = _estimate_text_width(second_text, font_height)
+                
+                # 下半部分水平垂直居中
+                x2 = margin + (effective_width - text2_width) // 2
+                y2 = margin + effective_height // 2 + (effective_height // 2 - font_height) // 2
+                
                 p.print_text_windows_font(
-                    x=50,
-                    y=400,
-                    font_height=56,  # 增大字体
+                    x=x2,
+                    y=y2,
+                    font_height=font_height,
                     rotation=0,
                     font_style=0,
                     font_underline=0,
@@ -247,14 +294,50 @@ def print_type2(
         # 初始化打印机设置
         _init_printer_settings(p, width, height)
         
-        # 打印二维码（上方位置）
-        p.send_command_utf8(f'QRCODE 200,80,H,{qr_size},A,0,"{qr_content}"')
+        # 计算打印区域尺寸（与 print_calibration_border 保持一致）
+        width_dots = int(float(width) * DPI_RATIO)
+        height_dots = int(float(height) * DPI_RATIO)
         
-        # 打印文本（下方位置）- 使用Windows字体支持中英文
+        # 有效打印区域（保留10 dots边距）
+        margin = 10
+        effective_width = width_dots - 2 * margin
+        effective_height = height_dots - 2 * margin
+        
+        # 字体大小
+        font_height = 48
+        
+        # 估算二维码尺寸（二维码通常是30-35个模块）
+        qr_modules = 33  # 中等复杂度二维码的模块数
+        qr_pixel_size = qr_size * qr_modules
+        
+        # 估算文本宽度
+        text_width = _estimate_text_width(text, font_height)
+        
+        # 二维码和文本之间的间距
+        spacing = 30
+        
+        # 计算整体高度（二维码 + 间距 + 文本）
+        total_height = qr_pixel_size + spacing + font_height
+        
+        # 计算垂直起始位置（整体垂直居中）
+        start_y = margin + (effective_height - total_height) // 2
+        
+        # 二维码水平居中
+        qr_x = margin + (effective_width - qr_pixel_size) // 2
+        qr_y = start_y
+        
+        # 打印二维码
+        p.send_command_utf8(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,"{qr_content}"')
+        
+        # 文本水平居中，位于二维码下方
+        text_x = margin + (effective_width - text_width) // 2
+        text_y = qr_y + qr_pixel_size + spacing
+        
+        # 打印文本
         p.print_text_windows_font(
-            x=50,
-            y=450,
-            font_height=48,
+            x=text_x,
+            y=text_y,
+            font_height=font_height,
             rotation=0,
             font_style=0,
             font_underline=0,
