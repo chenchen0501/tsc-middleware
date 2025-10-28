@@ -1,0 +1,271 @@
+---
+description: 错误处理和日志记录最佳实践
+---
+
+# 错误处理和日志记录指南
+
+## 错误处理层次
+
+### 1. FastAPI 路由层（[main.py](mdc:main.py)）
+
+- 捕获所有异常
+- 转换为 HTTPException
+- 返回友好的错误信息
+
+```python
+@app.post("/print")
+def api_print(job: PrintJob):
+    try:
+        print_label(...)
+        return {"status": "ok", "message": "成功"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"打印失败: {str(e)}"
+        )
+```
+
+### 2. 业务逻辑层（[printer.py](mdc:printer.py)）
+
+- 使用 try-finally 确保资源释放
+- 记录详细的日志信息
+- 向上抛出原始异常
+
+```python
+def print_label(...):
+    p = TSCPrinter()
+    try:
+        logging.info("开始打印...")
+        p.open_port(0)
+        # 打印逻辑
+    finally:
+        p.close_port()  # 确保端口关闭
+```
+
+## 常见错误场景
+
+### 1. USB 连接失败
+
+```python
+try:
+    p.open_port(0)
+except Exception as e:
+    logging.error(f"USB连接失败: {e}")
+    raise HTTPException(
+        status_code=503,
+        detail="无法连接到USB打印机，请检查打印机连接"
+    )
+```
+
+### 2. 参数验证错误
+
+由 Pydantic 自动处理，返回 422 状态码：
+
+```python
+class PrintJob(BaseModel):
+    qty: int = Field(1, ge=1, le=100)  # 自动验证范围
+```
+
+### 3. 打印命令执行失败
+
+```python
+try:
+    p.send_command(f"PRINT {qty},1")
+except Exception as e:
+    logging.error(f"打印命令执行失败: {e}")
+    raise Exception(f"打印机响应错误: {str(e)}")
+```
+
+### 4. 编码问题（中文乱码）
+
+```python
+try:
+    # 使用 Windows 字体打印中文
+    p.print_text_windows_font(..., font_face_name="宋体", text=text)
+except Exception as e:
+    logging.error(f"中文打印失败: {e}")
+    # 尝试备用方案
+    p.send_command_utf8(f'TEXT 50,200,"5",0,1,1,"{text}"')
+```
+
+## 日志记录规范
+
+### 日志级别使用
+
+- **DEBUG**: 详细的调试信息（默认不输出）
+- **INFO**: 关键操作记录（连接、打印开始/完成）
+- **WARNING**: 警告信息（使用默认值、配置缺失）
+- **ERROR**: 错误信息（打印失败、连接断开）
+
+### 日志格式
+
+在每个模块开头配置：
+
+```python
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+```
+
+### 日志记录示例
+
+```python
+# 操作开始
+logging.info("使用 USB 连接打印机...")
+
+# 参数信息
+logging.info(f"打印参数: 宽度={width}mm, 高度={height}mm, 数量={qty}")
+
+# 操作完成
+logging.info(f"打印完成: {qty}张标签")
+
+# 警告信息
+logging.warning(f"使用默认宽度: {DEFAULT_WIDTH}mm")
+
+# 错误信息
+logging.error(f"USB连接失败: {str(e)}")
+```
+
+## 资源清理
+
+### 打印机端口管理
+
+始终使用 try-finally 确保端口关闭：
+
+```python
+p = TSCPrinter()
+try:
+    p.open_port(0)
+    # 打印操作
+finally:
+    p.close_port()  # 即使出错也会执行
+```
+
+### 为什么重要
+
+- 避免端口被占用
+- 防止打印机状态异常
+- 确保下次能正常连接
+
+## 错误信息国际化
+
+### 用户友好的错误信息
+
+```python
+# ❌ 不好的错误信息
+detail="Error: 0x8007007e"
+
+# ✅ 好的错误信息
+detail="打印失败: 无法连接到USB打印机 (0x8007007e)。请检查打印机连接和驱动程序"
+```
+
+### 包含排查提示
+
+```python
+raise HTTPException(
+    status_code=503,
+    detail=(
+        "无法连接到USB打印机。"
+        "请检查: 1) USB电缆连接 2) 打印机电源 3) Windows驱动程序"
+    )
+)
+```
+
+## 调试技巧
+
+### 1. 详细日志模式
+
+临时启用 DEBUG 级别：
+
+```python
+logging.basicConfig(level=logging.DEBUG)
+```
+
+### 2. 打印命令回显
+
+调试打印机命令：
+
+```python
+cmd = f'TEXT 50,200,"5",0,1,1,"{text}"'
+logging.debug(f"发送命令: {cmd}")
+p.send_command(cmd)
+```
+
+### 3. 异常堆栈跟踪
+
+保留完整的异常信息：
+
+```python
+import traceback
+
+try:
+    # 操作
+except Exception as e:
+    logging.error(f"错误: {e}")
+    logging.debug(traceback.format_exc())  # 详细堆栈
+    raise
+```
+
+## 错误恢复策略
+
+### 1. 重试机制（可选）
+
+```python
+import time
+
+def print_with_retry(func, max_retries=3):
+    for i in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if i == max_retries - 1:
+                raise
+            logging.warning(f"重试 {i+1}/{max_retries}: {e}")
+            time.sleep(1)
+```
+
+### 2. 降级方案
+
+```python
+try:
+    # 首选方案：Windows字体
+    p.print_text_windows_font(..., font_face_name="宋体")
+except:
+    # 降级方案：TSC字体
+    p.send_command_utf8('TEXT ...')
+```
+
+### 3. 健康检查
+
+定期检查打印机状态：
+
+```python
+@app.get("/health")
+def health():
+    try:
+        test_connection()
+        return {"status": "healthy", "printer": "connected"}
+    except:
+        return {"status": "degraded", "printer": "disconnected"}
+```
+
+## 监控和告警（生产环境）
+
+### 日志聚合
+
+- 使用 ELK Stack 或 Loki
+- 集中存储和分析日志
+
+### 错误率监控
+
+- 统计每小时/每天的错误次数
+- 设置阈值告警
+
+### 打印机状态监控
+
+- 定期调用 `/test` 接口
+- 记录连接成功率
+- 打印机离线时发送通知

@@ -1,0 +1,76 @@
+---
+alwaysApply: true
+---
+
+# TSC-Print-Service 项目结构指南
+
+## 项目概述
+
+这是一个零驱动的 TSC 打印机 USB 打印中间件服务，使用 FastAPI 提供 HTTP 接口。
+
+- **开发平台**: macOS (M4/Apple Silicon)
+- **部署平台**: Windows
+- **连接方式**: USB（不再使用网络 IP 连接）
+- **纸张规格**: 10cm × 8cm (100mm × 80mm)
+- **打印机型号**: TTE-344 (300 DPI)
+
+## 核心文件说明
+
+- [main.py](mdc:main.py) - FastAPI 应用入口，定义所有 HTTP API 接口
+- [printer.py](mdc:printer.py) - 打印机核心模块，包含所有打印功能实现
+- [config.py](mdc:config.py) - 配置文件，包含打印区域尺寸和 DPI 设置
+- [requirements.txt](mdc:requirements.txt) - Python 依赖管理
+
+## 关键依赖
+
+- **FastAPI**: Web 框架
+- **tsclib**: TSC 打印机控制库（通过 pythonnet 调用 .NET 库）
+- **pythonnet**: Python 与 .NET 互操作
+- **mono**: macOS 上的 .NET 运行时
+
+## 环境要求
+
+### macOS 开发环境
+
+```bash
+# 必需的系统依赖
+- Rosetta 2 (M芯片)
+- mono
+- mono-libgdiplus
+
+# 必需的环境变量
+export MONO_GAC_PREFIX="/opt/homebrew"
+export DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"
+export PYTHONNET_RUNTIME=mono
+```
+
+### Windows 部署环境
+
+```cmd
+# 必需的系统依赖
+- VC2015-2022 x86 运行库
+- Python 3.x
+```
+
+## API 端点
+
+- `GET /` - 服务信息
+- `GET /health` - 健康检查
+- `POST /print` - 打印标签（文本 + 条形码）
+- `POST /print/qrcode` - 打印二维码标签
+- `POST /print/batch` - 批量打印（每张纸两个标签）
+- `POST /test` - 测试 USB 打印机连接
+
+## 打印坐标系统
+
+- **DPI**: 300 DPI (11.81 dots/mm)
+- **坐标原点**: 左上角 (0,0)
+- **单位**: dots（点）或 mm（毫米）
+- **转换公式**: dots = mm × 11.81
+
+## 开发注意事项
+
+1. 所有打印功能现在使用 USB 连接（`p.open_port(0)`），不再使用 IP 地址
+2. 打印中文时使用 Windows 字体（宋体）通过 `print_text_windows_font()` 方法
+3. 打印机设置中关闭了撕离模式（`SET TEAR OFF`）以避免打印后回退错位
+4. 标签尺寸必须先设置（`SIZE`命令），然后才能进行其他配置

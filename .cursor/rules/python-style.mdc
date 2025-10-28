@@ -1,0 +1,103 @@
+---
+globs: *.py
+---
+
+# Python 代码风格指南
+
+## 通用规范
+
+1. **使用 Python 3.10+ 语法**
+
+   - 使用类型提示（Type Hints）
+   - 使用 `list[str]` 而不是 `List[str]`（无需从 typing 导入）
+   - 函数参数和返回值都应该有类型注解
+
+2. **文档字符串**
+
+   - 所有公共函数必须包含文档字符串
+   - 使用 Google 风格的 docstring（带 Args 和 Returns 部分）
+   - 中文注释说明功能，英文参数名称
+
+3. **日志记录**
+
+   - 使用 Python logging 模块
+   - 关键操作添加 INFO 级别日志
+   - 错误处理添加 ERROR 级别日志
+   - 格式：`logging.info(f"描述: {变量}")`
+
+4. **异常处理**
+   - 使用 try-finally 确保资源释放（如打印机端口）
+   - 在 FastAPI 路由中使用 HTTPException 返回友好错误
+   - 保留原始错误信息在 detail 中
+
+## FastAPI 特定规范
+
+1. **模型定义**
+
+   - 使用 Pydantic BaseModel 定义请求/响应模型
+   - 使用 Field 添加验证和文档
+   - 使用 json_schema_extra 提供示例值
+
+2. **路由函数**
+
+   - 函数名使用 `api_` 前缀（如 `api_print`）
+   - 添加详细的文档字符串说明功能和参数
+   - 返回统一格式的 JSON 响应：`{"status": "ok", "message": "..."}`
+
+3. **错误处理**
+   - 使用 HTTPException 处理错误
+   - 400: 客户端参数错误
+   - 500: 服务器内部错误
+   - 503: 服务不可用（如打印机连接失败）
+
+## 打印机代码规范
+
+1. **USB 连接**
+
+   - 始终使用 `p.open_port(0)` 打开 USB 端口
+   - 使用 try-finally 确保 `p.close_port()` 被调用
+
+2. **中文支持**
+
+   - 使用 `print_text_windows_font()` 方法打印中文
+   - 字体设置为 "宋体"
+   - 或使用 `send_command_utf8()` 发送 UTF-8 编码命令
+
+3. **配置参数**
+   - 尺寸参数默认值从 [config.py](mdc:config.py) 导入
+   - 保留 `ip` 参数用于 API 兼容性，但注释说明实际使用 USB
+
+## 示例代码模式
+
+```python
+def print_something(
+    ip: str = "",  # 保留用于API兼容性，实际使用USB连接
+    text: str = "",
+    width: str = None,
+    height: str = None
+):
+    """
+    打印功能描述
+
+    Args:
+        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
+        text: 文本内容
+        width: 标签宽度(mm)，默认使用config中的配置
+        height: 标签高度(mm)，默认使用config中的配置
+    """
+    # 使用配置文件中的默认值
+    if width is None:
+        width = DEFAULT_WIDTH
+    if height is None:
+        height = DEFAULT_HEIGHT
+
+    p = TSCPrinter()
+    try:
+        logging.info("使用 USB 连接打印机...")
+        p.open_port(0)
+
+        # 打印操作...
+
+    finally:
+        p.close_port()
+```

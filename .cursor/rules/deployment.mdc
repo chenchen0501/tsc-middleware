@@ -1,0 +1,204 @@
+---
+description: 部署和环境配置指南
+---
+
+# 部署和环境配置指南
+
+## macOS 开发环境设置
+
+### 系统要求
+
+- macOS (Apple Silicon M 芯片)
+- Rosetta 2
+- Homebrew
+
+### 安装步骤
+
+1. **安装 Rosetta 2（仅首次）**
+
+```bash
+softwareupdate --install-rosetta --agree-to-license
+```
+
+2. **安装系统依赖**
+
+```bash
+brew install mono mono-libgdiplus
+```
+
+3. **创建 Python 虚拟环境**
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+```
+
+4. **设置环境变量**
+
+```bash
+export MONO_GAC_PREFIX="/opt/homebrew"
+export DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"
+export PYTHONNET_RUNTIME=mono
+```
+
+5. **验证安装**
+
+```bash
+python -c "from tsclib import TSCPrinter; print('✅ TSCLib加载成功')"
+```
+
+### 启动服务（开发模式）
+
+```bash
+# 方式 1: 使用脚本（推荐）
+./start.sh
+
+# 方式 2: 手动启动
+source venv/bin/activate
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+## Windows 部署环境设置
+
+### 系统要求
+
+- Windows 10/11
+- Python 3.10+
+- VC2015-2022 x86 运行库
+
+### 安装步骤
+
+1. **创建虚拟环境**
+
+```cmd
+python -m venv venv
+venv\Scripts\activate
+```
+
+2. **安装依赖**
+
+```cmd
+pip install -r requirements.txt
+```
+
+3. **启动服务**
+
+```cmd
+python main.py
+```
+
+### Windows 故障排查
+
+如果遇到错误 `0x8007007e`：
+
+- 下载并安装 Microsoft Visual C++ 2015-2022 Redistributable (x86)
+- 重启计算机
+- 重新运行服务
+
+## 配置管理
+
+### 配置文件: [config.py](mdc:config.py)
+
+```python
+# 标签默认尺寸（打印区域）
+DEFAULT_WIDTH = "100"   # 宽度(mm) - 10cm
+DEFAULT_HEIGHT = "80"   # 高度(mm) - 8cm
+
+# DPI 设置（TTE-344 = 300 DPI）
+DPI_RATIO = 11.81  # dots per mm
+```
+
+### 环境变量
+
+macOS 必需：
+
+```bash
+MONO_GAC_PREFIX="/opt/homebrew"
+DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"
+PYTHONNET_RUNTIME=mono
+```
+
+## 服务端口
+
+- **默认端口**: 8000
+- **API 文档**: http://localhost:8000/docs
+- **ReDoc 文档**: http://localhost:8000/redoc
+- **健康检查**: http://localhost:8000/health
+
+修改端口（如果 8000 被占用）：
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8080
+```
+
+## 生产环境建议
+
+1. **使用生产级 ASGI 服务器**
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+2. **配置日志级别**
+
+```bash
+uvicorn main:app --log-level warning
+```
+
+3. **使用进程管理器**
+
+   - Windows: NSSM (Non-Sucking Service Manager)
+   - Linux: systemd
+   - 跨平台: PM2
+
+4. **防火墙配置**
+   - 开放端口 8000（或自定义端口）
+   - 仅允许内网访问（推荐）
+
+## 依赖版本管理
+
+当前依赖（[requirements.txt](mdc:requirements.txt)）：
+
+```
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+tsclib>=0.1.2
+pydantic>=2.0.0
+```
+
+### 更新依赖
+
+```bash
+pip install --upgrade -r requirements.txt
+pip freeze > requirements.txt
+```
+
+### 固定版本（生产环境推荐）
+
+使用 `pip freeze` 生成精确版本：
+
+```bash
+pip freeze > requirements-lock.txt
+pip install -r requirements-lock.txt
+```
+
+## 跨平台开发注意事项
+
+1. **路径分隔符**: 使用 `os.path.join()` 或 `pathlib.Path`
+2. **编码**: 始终使用 UTF-8 编码
+3. **换行符**: Git 配置 `core.autocrlf` 处理
+4. **环境变量**: macOS 和 Windows 设置方式不同
+5. **pythonnet**: macOS 使用 mono，Windows 使用 .NET Framework
+
+## 测试清单
+
+部署后执行以下测试：
+
+1. ✅ 健康检查: `curl http://localhost:8000/health`
+2. ✅ API 文档: 访问 http://localhost:8000/docs
+3. ✅ USB 连接测试: `POST /test`
+4. ✅ 打印测试: `POST /print`
+5. ✅ 二维码测试: `POST /print/qrcode`
+6. ✅ 批量打印测试: `POST /print/batch`

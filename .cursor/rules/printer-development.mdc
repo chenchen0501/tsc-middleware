@@ -1,0 +1,170 @@
+---
+description: TSC 打印机开发和调试指南
+---
+
+# TSC 打印机开发指南
+
+## 打印机初始化流程
+
+所有打印功能开始时必须按以下顺序初始化：
+
+1. **清除缓冲区**: `CLS`
+2. **设置尺寸**: `SIZE {width} mm, {height} mm` （必须最先设置）
+3. **设置间隙**: `GAP 0 mm, 0 mm`
+4. **设置方向**: `DIRECTION 0`
+5. **设置参考点**: `REFERENCE 0,0`
+6. **设置偏移**: `OFFSET 0 mm`
+7. **设置速度**: `SPEED 4` (1-14，数字越小越慢但质量越好)
+8. **设置浓度**: `DENSITY 12` (0-15)
+9. **关闭撕离模式**: `SET TEAR OFF` 和 `SET PEEL OFF`
+10. **设置停止位置**: `SHIFT 0`
+
+参考 [printer.py](mdc:printer.py) 中的 `_init_printer_settings()` 函数。
+
+## 坐标和尺寸计算
+
+### DPI 配置
+
+- TTE-344 打印机: 300 DPI = 11.81 dots/mm
+- 配置位置: [config.py](mdc:config.py) 中的 `DPI_RATIO`
+
+### 坐标转换
+
+```python
+# 毫米转点
+dots = mm * DPI_RATIO
+
+# 点转毫米
+mm = dots / DPI_RATIO
+```
+
+### 坐标系统
+
+- 原点在左上角 (0,0)
+- X 轴向右增加
+- Y 轴向下增加
+- 单位: dots（除非命令中明确指定 mm）
+
+## 中文打印方案
+
+### 方案 1: Windows 字体（推荐）
+
+```python
+p.print_text_windows_font(
+    x=50,
+    y=200,
+    font_height=56,
+    rotation=0,
+    font_style=0,
+    font_underline=0,
+    font_face_name="宋体",  # 支持中文
+    text="中文文本"
+)
+```
+
+### 方案 2: UTF-8 命令
+
+```python
+p.send_command_utf8(f'TEXT 250,30,"5",0,1,1,"中文文本"')
+```
+
+### 字体代码
+
+- "5": TSC 内置中文字体
+- "TSS24.BF2": 可选的中文字体
+- "宋体", "黑体": Windows 系统字体
+
+## 常见打印命令
+
+### 文本
+
+```
+TEXT x,y,"字体",旋转,x放大,y放大,"内容"
+```
+
+### 条形码
+
+```
+BARCODE x,y,"类型",高度,可读,旋转,窄条,宽条,"数据"
+示例: BARCODE 150,150,"128",80,1,0,2,2,"1234567890"
+```
+
+### 二维码
+
+```
+QRCODE x,y,纠错等级,单元宽度,模式,旋转,"内容"
+示例: QRCODE 250,150,H,8,A,0,"https://example.com"
+```
+
+### 矩形框
+
+```
+BOX x_start,y_start,x_end,y_end,线宽
+示例: BOX 10,10,1000,900,3
+```
+
+### 直线/条
+
+```
+BAR x,y,宽度,高度
+示例: BAR 100,100,200,5
+```
+
+### 打印执行
+
+```
+PRINT 数量,份数
+示例: PRINT 1,1
+```
+
+## 批量打印注意事项
+
+批量打印时（[printer.py](mdc:printer.py) 中的 `print_batch_labels()`）:
+
+- 每张纸打印两个标签（上下排列）
+- 每次循环处理两个文本项
+- 每张纸单独调用一次 `_init_printer_settings()` 和 `PRINT 1,1`
+
+## 调试和测试工具
+
+### 1. 校准边框打印
+
+使用 `print_calibration_border()` 函数打印测试边框，检查：
+
+- 打印区域是否完整
+- 坐标系统是否准确
+- 边距是否合理
+
+### 2. 纸张校准
+
+使用 `calibrate_paper()` 执行自动校准（会打印测试页）
+
+### 3. 连接测试
+
+使用 `test_connection()` 验证 USB 连接
+
+## 常见问题排查
+
+### 打印位置偏移
+
+- 检查 `SET TEAR OFF` 是否正确关闭
+- 验证 `SIZE` 命令在其他命令之前执行
+- 检查 `SHIFT 0` 和 `OFFSET 0` 设置
+
+### 中文乱码
+
+- 使用 `print_text_windows_font()` 而不是 `TEXT` 命令
+- 确保字体名称正确（"宋体" 或 "黑体"）
+- 或使用 `send_command_utf8()` 发送 UTF-8 编码
+
+### USB 连接失败
+
+- 确保打印机 USB 电缆连接正常
+- Windows 上检查是否安装 VC2015-2022 x86 运行库
+- macOS 上检查环境变量 `MONO_GAC_PREFIX` 和 `DYLD_LIBRARY_PATH`
+
+### 打印质量问题
+
+- 调整 `SPEED`（降低速度提高质量）
+- 调整 `DENSITY`（增加浓度）
+- 检查打印头清洁度
