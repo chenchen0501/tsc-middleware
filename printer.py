@@ -25,8 +25,9 @@ def _init_printer_settings(printer: TSCPrinter, width: str, height: str):
     # 设置标签尺寸（重要：先设置尺寸）
     printer.send_command(f"SIZE {width} mm, {height} mm")
     
-    # 设置间隙传感器（0间隙用于连续纸或无间隙标签）
-    printer.send_command("GAP 0 mm, 0 mm")
+    # 设置间隙传感器（3mm间隙用于有间隙的标签纸）
+    # 如果是连续纸，改为 GAP 0 mm, 0 mm
+    printer.send_command("GAP 3 mm, 0 mm")
     
     # 设置打印方向（0=正常，1=镜像）
     printer.send_command("DIRECTION 0")
@@ -290,19 +291,30 @@ def test_connection(ip: str = "") -> bool:
 
 def calibrate_paper():
     """
-    执行纸张校准
+    执行纸张校准（针对间隙标签纸）
     
-    让打印机自动检测纸张位置和间隙，解决打印位置不准确的问题
+    注意：适用于有间隙的标签纸
+    使用 EOP 命令让打印机自动检测标签间隙
     """
     p = TSCPrinter()
     try:
-        logging.info("开始纸张校准...")
+        logging.info("开始纸张校准（间隙检测模式）...")
         p.open_port(0)
         
-        # 发送自动校准命令
-        p.send_command("SELFTEST")
+        # 重要：先设置标签尺寸和间隙类型
+        # 对于有间隙的标签纸，需要设置实际的间隙值
+        # 通常标签之间的间隙是 2-3mm
+        p.send_command("SIZE 100 mm, 80 mm")
+        p.send_command("GAP 3 mm, 0 mm")  # 间隙标签纸，设置 3mm 间隙
         
-        logging.info("纸张校准完成，打印机将打印测试页")
+        # 使用 EOP (End of Page) 命令进行自动校准
+        # 这个命令会让打印机自动检测标签间隙并调整位置
+        p.send_command("EOP")
+        
+        # 或者使用 SELFTEST（会打印配置信息页）
+        # p.send_command("SELFTEST")
+        
+        logging.info("纸张校准完成（间隙检测），打印机已自动调整位置")
         
         p.close_port()
         return True

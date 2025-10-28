@@ -35,9 +35,9 @@ PRINT_CONFIGS = [
         "height": "80"
     },
     {
-        "name": "校准2 - 纸张自动校准",
+        "name": "校准2 - 纸张自动校准（间隙检测）",
         "type": "paper_calibration",
-        "description": "让打印机自动检测纸张位置，解决打印偏移问题（会打印测试页）"
+        "description": "让打印机自动检测标签间隙，调整打印位置（使用EOP命令）"
     },
     {
         "name": "Type 1 - 批量纯文本打印（上下两行）",
@@ -155,14 +155,16 @@ def run_test(config):
             return False
     elif config.get('type') == 'paper_calibration':
         # 纸张自动校准
-        print(f"打印模式: 纸张自动校准")
+        print(f"打印模式: 纸张自动校准（间隙检测）")
         print(f"说明: {config.get('description', '')}")
         print()
         print("⚠️  注意:")
-        print("  - 打印机会自动检测纸张位置和间隙")
-        print("  - 校准过程中会打印一张测试页")
-        print("  - 校准后可解决打印位置偏移问题")
+        print("  - 适用于有间隙的标签纸（标签之间有透明间隔）")
+        print("  - 打印机会自动检测标签间隙并调整打印位置")
+        print("  - 使用 EOP 命令进行校准，不会打印测试页")
         print("  - 建议在首次使用或更换纸张后执行")
+        print()
+        print("💡 如果您的纸张是连续纸（无间隙），请联系开发人员修改 GAP 设置")
         print()
         
         confirm = input("是否确认执行纸张校准? (y/n): ")
@@ -174,9 +176,10 @@ def run_test(config):
             print("⏳ 正在执行纸张校准...")
             success = calibrate_paper()
             if success:
-                print("✅ [成功] 纸张校准完成，打印机已打印测试页")
+                print("✅ [成功] 纸张校准完成，打印机已自动检测标签间隙")
                 print()
-                print("💡 提示: 校准完成后，请运行测试6检查打印位置是否正确")
+                print("💡 提示: 校准完成后，请运行「校准1」检查打印位置是否正确")
+                print("💡 提示: 然后可以测试 Type 1 或 Type 2 打印功能")
                 return True
             else:
                 print("❌ [失败] 纸张校准失败")
