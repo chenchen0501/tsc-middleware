@@ -4,7 +4,7 @@ TSC打印机测试脚本 - 支持中文打印
 """
 import sys
 import os
-from printer import print_label, print_batch_labels, print_qrcode_with_text, print_calibration_border, calibrate_paper
+from printer import print_label, print_type1, print_type2, print_calibration_border, calibrate_paper
 
 # Windows编码设置 - 修复中文乱码
 if sys.platform == 'win32':
@@ -40,8 +40,8 @@ PRINT_CONFIGS = [
         "description": "让打印机自动检测纸张位置，解决打印偏移问题（会打印测试页）"
     },
     {
-        "name": "类型1 - 批量打印（上下两行）",
-        "type": "batch",
+        "name": "Type 1 - 批量纯文本打印（上下两行）",
+        "type": "type1",
         "text_list": [
             "cc测试拆箱物料1_盖子_1_1",
             "cc测试拆箱物料2_底座_1_2",
@@ -50,8 +50,8 @@ PRINT_CONFIGS = [
         "height": "80"
     },
     {
-        "name": "类型2 - 二维码+文本",
-        "type": "qrcode_text",
+        "name": "Type 2 - 二维码+文本（独占纸张）",
+        "type": "type2",
         "qr_content": "https://www.example.com/product/ABC123",
         "text": "Product-ABC123-2024",
         "qty": 1,
@@ -74,40 +74,42 @@ def run_test(config):
     print(f"打印机模式: USB")
     
     # 判断打印类型
-    if config.get('type') == 'batch':
-        # 批量打印
-        print(f"打印模式: 批量打印（上下两行）")
+    if config.get('type') == 'type1':
+        # Type 1: 批量纯文本打印（上下两行）
+        print(f"打印模式: Type 1 - 批量纯文本打印（上下两行）")
         print(f"标签列表:")
         for i, text in enumerate(config['text_list'], 1):
             print(f"  {i}. {text}")
         print(f"标签数量: {len(config['text_list'])} 个")
         print(f"打印张数: {(len(config['text_list']) + 1) // 2} 张")
         print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
+        print(f"固定参数: 字体=宋体56点")
         print()
         
         try:
-            print_batch_labels(
+            print_type1(
                 text_list=config['text_list'],
                 width=config['width'],
                 height=config['height']
             )
-            print("✅ [成功] 批量打印命令已发送到USB打印机")
+            print("✅ [成功] Type 1 批量打印命令已发送到USB打印机")
             return True
         except Exception as e:
             print(f"❌ [失败] {e}")
             return False
-    elif config.get('type') == 'qrcode_text':
-        # 二维码+文本打印
-        print(f"打印模式: 二维码+文本")
+    elif config.get('type') == 'type2':
+        # Type 2: 二维码+文本打印（独占纸张）
+        print(f"打印模式: Type 2 - 二维码+文本打印（独占纸张）")
         print(f"二维码内容: {config['qr_content']}")
         print(f"文本内容: {config['text']}")
         print(f"打印数量: {config['qty']}")
         print(f"二维码大小: {config['qr_size']}")
         print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
+        print(f"固定参数: 字体=宋体48点")
         print()
         
         try:
-            print_qrcode_with_text(
+            print_type2(
                 qr_content=config['qr_content'],
                 text=config['text'],
                 qty=config['qty'],
@@ -115,7 +117,7 @@ def run_test(config):
                 height=config['height'],
                 qr_size=config['qr_size']
             )
-            print("✅ [成功] 二维码+文本打印命令已发送到USB打印机")
+            print("✅ [成功] Type 2 二维码+文本打印命令已发送到USB打印机")
             return True
         except Exception as e:
             print(f"❌ [失败] {e}")
