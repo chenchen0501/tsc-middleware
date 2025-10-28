@@ -313,8 +313,8 @@ def print_type2(
         # 估算文本宽度
         text_width = _estimate_text_width(text, font_height)
         
-        # 二维码和文本之间的间距
-        spacing = 30
+        # 二维码和文本之间的间距（增加到60 dots，约5mm）
+        spacing = 60
         
         # 计算整体高度（二维码 + 间距 + 文本）
         total_height = qr_pixel_size + spacing + font_height
