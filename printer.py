@@ -344,11 +344,13 @@ def print_type2(
         qr_y = start_y
         
         # 打印二维码
-        # QRCODE命令格式：QRCODE x,y,ECC_level,cell_width,mode,rotation,"data"
+        # QRCODE命令格式：QRCODE x,y,ECC_level,cell_width,mode,rotation,model,"data"
         # ECC_level: L(7%), M(15%), Q(25%), H(30%) - 错误纠正级别
+        # cell_width: 二维码单元宽度（推荐8-12）
         # mode: A=Auto, M=Manual
         # rotation: 0, 90, 180, 270
-        p.send_command(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,"{qr_content}"')
+        # model: M1(原始), M2(增强) - 测试确认 M2 模型可以正常识别
+        p.send_command(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,M2,"{qr_content}"')
         
         # 文本水平居中，位于二维码下方
         text_x = margin + (effective_width - text_width) // 2
