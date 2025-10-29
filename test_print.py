@@ -41,23 +41,25 @@ PRINT_CONFIGS = [
     },
     {
         "name": "Type 1 - 批量纯文本打印（上下两行）",
-        "type": "type1",
-        "text_list": [
-            "cc测试拆箱物料1_盖子_1_1",
-            "cc测试拆箱物料2_底座_1_2",
-        ],
-        "width": "100",
-        "height": "80"
+        "data": {
+            "type": 1,
+            "print_list": [
+                {"text": "cc测试拆箱物料1_盖子_1_1"},
+                {"text": "cc测试拆箱物料2_底座_1_2"},
+            ]
+        }
     },
     {
         "name": "Type 2 - 二维码+文本（独占纸张）",
-        "type": "type2",
-        "qr_content": "567890234567",
-        "text": "sn：567890234567",
-        "qty": 1,
-        "width": "100",
-        "height": "80",
-        "qr_size": 10
+        "data": {
+            "type": 2,
+            "print_list": [
+                {
+                    "text": "sn：ODR2025102900030018001",
+                    "qr_content": "ODR2025102900030018001"
+                }
+            ]
+        }
     },
 
 ]
@@ -73,50 +75,51 @@ def run_test(config):
     print(f"{'='*50}")
     print(f"打印机模式: USB")
     
-    # 判断打印类型
-    if config.get('type') == 'type1':
+    # 判断打印类型（新格式：使用 data 字段）
+    if 'data' in config and config['data'].get('type') == 1:
         # Type 1: 批量纯文本打印（上下两行）
+        data = config['data']
+        text_list = [item['text'] for item in data['print_list']]
+        
         print(f"打印模式: Type 1 - 批量纯文本打印（上下两行）")
+        print(f"API 请求数据: {data}")
         print(f"标签列表:")
-        for i, text in enumerate(config['text_list'], 1):
+        for i, text in enumerate(text_list, 1):
             print(f"  {i}. {text}")
-        print(f"标签数量: {len(config['text_list'])} 个")
-        print(f"打印张数: {(len(config['text_list']) + 1) // 2} 张")
-        print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
-        print(f"固定参数: 字体=宋体56点")
+        print(f"标签数量: {len(text_list)} 个")
+        print(f"打印张数: {(len(text_list) + 1) // 2} 张")
+        print(f"固定参数: 纸张=100mm×80mm, 字体=宋体56点")
         print()
         
         try:
-            print_type1(
-                text_list=config['text_list'],
-                width=config['width'],
-                height=config['height']
-            )
+            print_type1(text_list=text_list)
             print("✅ [成功] Type 1 批量打印命令已发送到USB打印机")
             return True
         except Exception as e:
             print(f"❌ [失败] {e}")
             return False
-    elif config.get('type') == 'type2':
+    
+    elif 'data' in config and config['data'].get('type') == 2:
         # Type 2: 二维码+文本打印（独占纸张）
+        data = config['data']
+        
         print(f"打印模式: Type 2 - 二维码+文本打印（独占纸张）")
-        print(f"二维码内容: {config['qr_content']}")
-        print(f"文本内容: {config['text']}")
-        print(f"打印数量: {config['qty']}")
-        print(f"二维码大小: {config['qr_size']}")
-        print(f"标签尺寸: {config['width']}mm x {config['height']}mm")
-        print(f"固定参数: 字体=宋体48点")
+        print(f"API 请求数据: {data}")
+        print(f"打印列表:")
+        for i, item in enumerate(data['print_list'], 1):
+            print(f"  {i}. 文本: {item['text']}, 二维码: {item['qr_content']}")
+        print(f"打印数量: {len(data['print_list'])} 张")
+        print(f"固定参数: 纸张=100mm×80mm, 字体=宋体48点, 二维码大小=从配置文件读取")
         print()
         
         try:
-            print_type2(
-                qr_content=config['qr_content'],
-                text=config['text'],
-                qty=config['qty'],
-                width=config['width'],
-                height=config['height'],
-                qr_size=config['qr_size']
-            )
+            # 批量打印（与 main.py 中的逻辑完全一致）
+            for item in data['print_list']:
+                print_type2(
+                    qr_content=item['qr_content'],
+                    text=item['text'],
+                    qty=1
+                )
             print("✅ [成功] Type 2 二维码+文本打印命令已发送到USB打印机")
             return True
         except Exception as e:
