@@ -332,8 +332,8 @@ def print_type2(
         qr_y = start_y
         
         # 打印二维码
-        p.send_command_utf8(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,"{qr_content}"')
-        
+        p.send_command(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,M2,"{qr_content}"')
+
         # 文本水平居中，位于二维码下方
         text_x = margin + (effective_width - text_width) // 2
         text_y = qr_y + qr_pixel_size + spacing
