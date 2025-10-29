@@ -252,7 +252,7 @@ def print_type2(
     qty: int = 1,
     width: str = None,
     height: str = None,
-    qr_size: int = 8
+    qr_size: int = None
 ):
     """
     Type 2: 批量二维码+文本打印（每个二维码独占一张纸）
@@ -265,7 +265,7 @@ def print_type2(
     固定参数：
     - width: 100mm (10cm)
     - height: 80mm (8cm)
-    - qr_size: 8（二维码大小）
+    - qr_size: 12（二维码单元宽度，1-10）
     - 字体：宋体，48点
     
     Args:
@@ -274,7 +274,7 @@ def print_type2(
         qty: 打印数量（默认1张）
         width: 标签宽度(mm)，默认100mm（一般不需要修改）
         height: 标签高度(mm)，默认80mm（一般不需要修改）
-        qr_size: 二维码单元宽度(1-10)，默认8（一般不需要修改）
+        qr_size: 二维码单元宽度(1-10)，默认12（从config配置读取，一般不需要修改）
     
     示例：
         print_type2(
@@ -289,6 +289,8 @@ def print_type2(
         width = DEFAULT_WIDTH
     if height is None:
         height = DEFAULT_HEIGHT
+    if qr_size is None:
+        qr_size = TYPE2_QR_SIZE
     
     p = TSCPrinter()
     try:
@@ -311,8 +313,18 @@ def print_type2(
         # 字体大小（使用统一的配置）
         font_height = TYPE2_FONT_HEIGHT
         
-        # 估算二维码尺寸（二维码通常是30-35个模块）
-        qr_modules = 33  # 中等复杂度二维码的模块数
+        # 估算二维码尺寸
+        # 二维码模块数根据内容长度动态变化：
+        # - 短内容（<10字符）：通常21-25个模块
+        # - 中等内容（10-30字符）：通常29-33个模块
+        # - 长内容（>30字符）：通常37-41个模块
+        # 为了确保足够大可识别，我们使用较大的估算值
+        if len(qr_content) < 10:
+            qr_modules = 25
+        elif len(qr_content) < 30:
+            qr_modules = 37
+        else:
+            qr_modules = 45
         qr_pixel_size = qr_size * qr_modules
         
         # 估算文本宽度
@@ -332,7 +344,11 @@ def print_type2(
         qr_y = start_y
         
         # 打印二维码
-        p.send_command(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,"{qr_content}"'.encode('gbk'))
+        # QRCODE命令格式：QRCODE x,y,ECC_level,cell_width,mode,rotation,"data"
+        # ECC_level: L(7%), M(15%), Q(25%), H(30%) - 错误纠正级别
+        # mode: A=Auto, M=Manual
+        # rotation: 0, 90, 180, 270
+        p.send_command(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,"{qr_content}"')
         
         # 文本水平居中，位于二维码下方
         text_x = margin + (effective_width - text_width) // 2
@@ -559,7 +575,7 @@ def print_batch_labels(text_list: list[str] = None, width: str = None, height: s
 
 
 def print_qrcode_with_text(qr_content: str = "", text: str = "", qty: int = 1, 
-                           width: str = None, height: str = None, qr_size: int = 8, ip: str = ""):
+                           width: str = None, height: str = None, qr_size: int = None, ip: str = ""):
     """兼容性别名：调用 print_type2"""
     return print_type2(qr_content=qr_content, text=text, qty=qty, width=width, height=height, qr_size=qr_size)
 
