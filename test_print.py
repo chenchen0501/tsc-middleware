@@ -57,7 +57,7 @@ PRINT_CONFIGS = [
         "qty": 1,
         "width": "100",
         "height": "80",
-        "qr_size": 12
+        "qr_size": 10
     },
 
 ]

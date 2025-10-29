@@ -252,7 +252,7 @@ def print_type2(
     qty: int = 1,
     width: str = None,
     height: str = None,
-    qr_size: int = 8
+    qr_size: int = None
 ):
     """
     Type 2: 批量二维码+文本打印（每个二维码独占一张纸）
@@ -260,12 +260,13 @@ def print_type2(
     打印方式：
     - 二维码在上方，文本在下方
     - 每个二维码+文本独占一张纸
+    - 二维码和文本中心对齐，整体在纸张居中
     - 适合需要单独撕下的场景
     
     固定参数：
     - width: 100mm (10cm)
     - height: 80mm (8cm)
-    - qr_size: 8（二维码大小）
+    - qr_size: 10（二维码大小，最大值）
     - 字体：宋体，48点
     
     Args:
@@ -274,7 +275,7 @@ def print_type2(
         qty: 打印数量（默认1张）
         width: 标签宽度(mm)，默认100mm（一般不需要修改）
         height: 标签高度(mm)，默认80mm（一般不需要修改）
-        qr_size: 二维码单元宽度(1-10)，默认8（一般不需要修改）
+        qr_size: 二维码单元宽度(1-10)，默认使用配置文件中的值（一般不需要修改）
     
     示例：
         print_type2(
@@ -289,6 +290,8 @@ def print_type2(
         width = DEFAULT_WIDTH
     if height is None:
         height = DEFAULT_HEIGHT
+    if qr_size is None:
+        qr_size = TYPE2_QR_SIZE
     
     p = TSCPrinter()
     try:
@@ -327,15 +330,18 @@ def print_type2(
         # 计算垂直起始位置（整体垂直居中）
         start_y = margin + (effective_height - total_height) // 2
         
-        # 二维码水平居中
-        qr_x = margin + (effective_width - qr_pixel_size) // 2
+        # 计算纸张中心线
+        center_x = margin + effective_width // 2
+        
+        # 二维码水平居中（相对于纸张中心线）
+        qr_x = center_x - qr_pixel_size // 2
         qr_y = start_y
         
         # 打印二维码
         p.send_command(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,M2,"{qr_content}"')
 
-        # 文本水平居中，位于二维码下方
-        text_x = margin + (effective_width - text_width) // 2
+        # 文本水平居中（相对于纸张中心线），位于二维码下方
+        text_x = center_x - text_width // 2
         text_y = qr_y + qr_pixel_size + spacing
         
         # 打印文本

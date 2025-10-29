@@ -194,10 +194,10 @@ Content-Type: application/json
 - **固定参数**：
   - 纸张尺寸: 100mm × 80mm
   - 字体: 宋体 48 点
-  - 二维码大小: 8 (单元宽度)
-  - 二维码与文本间距: 60 dots (约 5mm)
+  - 二维码大小: 10 (单元宽度，最大值)
+  - 二维码与文本间距: 24 dots (约 2mm)
   - 边距: 10 dots (约 0.85mm)
-  - 布局: 二维码和文本整体水平垂直居中
+  - 布局: 二维码和文本中心对齐，整体在纸张居中
 
 **成功响应**
 
@@ -380,7 +380,7 @@ batchQrcodePrint();
 5. **固定参数**: 所有打印参数已根据 type 固定，用户无需传递
 
    - type=1: width=100mm, height=80mm
-   - type=2: width=100mm, height=80mm, qr_size=8
+   - type=2: width=100mm, height=80mm, qr_size=10
 
 6. **type=1 批量打印**: 自动将文本列表分组，每两个文本打印在一张纸的上下两行
 
