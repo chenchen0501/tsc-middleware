@@ -52,8 +52,8 @@ PRINT_CONFIGS = [
     {
         "name": "Type 2 - 二维码+文本（独占纸张）",
         "type": "type2",
-        "qr_content": "https://www.example.com/product/ABC123",
-        "text": "Product-ABC123-2024",
+        "qr_content": "9998889923",
+        "text": "sn: 9998889923",
         "qty": 1,
         "width": "100",
         "height": "80",
