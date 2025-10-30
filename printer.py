@@ -84,7 +84,6 @@ def _init_printer_settings(printer: TSCPrinter, width: str, height: str):
 
 
 def print_label(
-    ip: str = "",
     text: str = "",
     barcode: str = "",
     qty: int = 1,
@@ -92,10 +91,9 @@ def print_label(
     height: str = None
 ):
     """
-    打印标签
+    打印标签（USB连接）
     
     Args:
-        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
         text: 标签文本
         barcode: 条形码内容（可选，默认不打印条码）
         qty: 打印数量
@@ -363,13 +361,10 @@ def print_type2(
         p.close_port()
 
 
-def test_connection(ip: str = "") -> bool:
+def test_connection() -> bool:
     """
-    测试打印机连接
+    测试打印机USB连接
     
-    Args:
-        ip: 打印机IP地址（保留用于API兼容性，实际使用USB连接）
-        
     Returns:
         bool: 连接成功返回True
     """
@@ -565,7 +560,7 @@ def print_batch_labels(text_list: list[str] = None, width: str = None, height: s
 
 
 def print_qrcode_with_text(qr_content: str = "", text: str = "", qty: int = 1, 
-                           width: str = None, height: str = None, qr_size: int = 8, ip: str = ""):
+                           width: str = None, height: str = None, qr_size: int = 8):
     """兼容性别名：调用 print_type2"""
     return print_type2(qr_content=qr_content, text=text, qty=qty, width=width, height=height, qr_size=qr_size)
 

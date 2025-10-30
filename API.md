@@ -1,72 +1,109 @@
-# TSC 打印服务 API 接口文档
+# 📖 TSC-Print-Middleware API 文档
 
-## 📋 目录
+## 目录
 
 - [服务信息](#服务信息)
 - [基础接口](#基础接口)
-  - [获取服务信息](#获取服务信息)
-  - [健康检查](#健康检查)
 - [打印接口](#打印接口)
-  - [统一打印接口](#统一打印接口)
-- [错误码说明](#错误码说明)
+  - [模板 1: single-text](#1-single-text---单行文本)
+  - [模板 2: double-text](#2-double-text---双行文本)
+  - [模板 3: qrcode-with-text](#3-qrcode-with-text---二维码文本)
+  - [模板 4: barcode-with-text](#4-barcode-with-text---条形码文本)
+  - [模板 5: custom](#5-custom---完全自定义)
+- [错误处理](#错误处理)
+- [代码示例](#代码示例)
 
 ---
 
 ## 服务信息
 
-- **服务名称**: TSC-Print-Service
+- **服务名称**: TSC-Print-Middleware
 - **版本**: 3.0.0
-- **描述**: 零驱动 USB 打印中间件 | Windows 部署 | USB 连接模式
 - **默认端口**: 8000
 - **纸张规格**: 10cm × 8cm (100mm × 80mm)
-- **连接方式**: USB（不使用网络 IP）
-- **跨域支持**: 已启用 CORS，支持所有源访问
+- **连接方式**: USB
 - **API 文档**: http://localhost:8000/docs (Swagger UI)
 
 ---
 
 ## 基础接口
 
-### 获取服务信息
+### GET `/` - 获取服务信息
 
-获取服务的基本信息
+获取服务的基本信息和支持的模板列表
 
 **请求**
 
-```
-GET /
+```bash
+curl http://localhost:8000/
 ```
 
-**响应示例**
+**响应**
 
 ```json
 {
-  "service": "TSC-Print-Service",
+  "service": "TSC-Print-Middleware",
   "version": "3.0.0",
   "mode": "USB",
   "docs": "/docs",
-  "health": "/health"
+  "health": "/health",
+  "templates": [
+    "single-text",
+    "double-text",
+    "qrcode-with-text",
+    "barcode-with-text",
+    "custom"
+  ]
 }
 ```
 
 ---
 
-### 健康检查
+### GET `/health` - 健康检查
 
 检查服务是否正常运行
 
 **请求**
 
-```
-GET /health
+```bash
+curl http://localhost:8000/health
 ```
 
-**响应示例**
+**响应**
 
 ```json
 {
   "status": "alive",
-  "service": "tsc-print"
+  "service": "tsc-print-middleware"
+}
+```
+
+---
+
+### POST `/test` - 测试打印机连接
+
+测试 USB 打印机是否正常连接
+
+**请求**
+
+```bash
+curl -X POST http://localhost:8000/test
+```
+
+**成功响应**
+
+```json
+{
+  "status": "ok",
+  "message": "USB打印机连接成功"
+}
+```
+
+**失败响应** (503 Service Unavailable)
+
+```json
+{
+  "detail": "USB打印机连接失败"
 }
 ```
 
@@ -74,245 +111,627 @@ GET /health
 
 ## 打印接口
 
-### 统一打印接口
+### POST `/print` - 统一打印接口
 
-通过 `type` 参数区分不同的打印模式，所有打印任务都通过此接口完成。
-
-**请求**
-
-```
-POST /print
-Content-Type: application/json
-```
-
-**打印类型说明**
-
-| type | 名称                | 说明                                 |
-| ---- | ------------------- | ------------------------------------ |
-| 1    | 批量纯文本打印      | 每张纸上下两行打印两个标签，每行居中 |
-| 2    | 批量二维码+文本打印 | 每个二维码独占一张纸，整体居中       |
-
-**通用参数说明**
-
-| 参数名     | 类型          | 必填 | 说明                                           |
-| ---------- | ------------- | ---- | ---------------------------------------------- |
-| type       | integer       | 是   | 打印类型：1=纯文本批量, 2=二维码批量           |
-| print_list | array[object] | 是   | 打印项列表，每个对象包含 text（和 qr_content） |
-
-**重要提示**：所有打印参数（width、height、qr_size）已根据 type 固定，用户无需传递。
+所有打印任务都通过此接口完成，根据 `template` 参数选择不同的打印模式。
 
 ---
 
-#### Type 1: 批量纯文本打印
+### 1. single-text - 单行文本
 
-每张纸上下两行打印两个标签
+**用途**: 单行文本水平垂直居中打印
 
-**print_list 对象结构**
+**打印效果**:
 
-| 字段名 | 类型   | 必填 | 说明     | 示例     |
-| ------ | ------ | ---- | -------- | -------- |
-| text   | string | 是   | 文本内容 | "物料 1" |
+```
+┌─────────────────────┐
+│                     │
+│   物料编号: A12345   │
+│                     │
+└─────────────────────┘
+```
 
-**请求示例**
+**请求体**
 
 ```json
 {
-  "type": 1,
+  "template": "single-text",
   "print_list": [
-    { "text": "cc测试拆箱物料1_盖子_1_1" },
-    { "text": "cc测试拆箱物料2_底座_1_2" },
-    { "text": "cc测试拆箱物料3_配件_1_3" }
+    { "text": "物料编号: A12345" },
+    { "text": "产品名称: 测试产品" }
   ]
 }
 ```
 
-**打印说明**：
+**参数说明**
 
-- 上述 3 个文本会打印在 2 张纸上
-  - 第 1 张纸：上方"物料 1"，下方"物料 2"
-  - 第 2 张纸：上方"物料 3"
-- **固定参数**：
-  - 纸张尺寸: 100mm × 80mm
-  - 字体: 宋体 56 点
-  - 边距: 10 dots (约 0.85mm)
-  - 布局: 上下两行分别水平垂直居中
+| 字段              | 类型   | 必填 | 说明                 |
+| ----------------- | ------ | ---- | -------------------- |
+| template          | string | 是   | 固定为 "single-text" |
+| print_list        | array  | 是   | 打印数据列表         |
+| print_list[].text | string | 是   | 文本内容             |
 
-**成功响应**
+**响应**
 
 ```json
 {
   "status": "ok",
-  "message": "批量打印成功：3个标签（共2张纸）"
+  "message": "单行文本打印成功：2张标签"
 }
 ```
 
-**失败响应**
+**Python 示例**
 
-- **状态码**: 400 (Bad Request) - 参数错误
+```python
+import requests
 
-```json
-{
-  "detail": "print_list参数不能为空"
-}
+response = requests.post("http://localhost:8000/print", json={
+    "template": "single-text",
+    "print_list": [
+        {"text": "物料编号: A12345"},
+        {"text": "产品名称: 测试产品"}
+    ]
+})
+print(response.json())
+```
+
+**cURL 示例**
+
+```bash
+curl -X POST http://localhost:8000/print \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "single-text",
+    "print_list": [
+      {"text": "物料编号: A12345"}
+    ]
+  }'
 ```
 
 ---
 
-#### Type 2: 批量二维码+文本打印
+### 2. double-text - 双行文本
 
-每个二维码独占一张纸
+**用途**: 每张纸上下两行打印两个标签（节省纸张）
 
-**print_list 对象结构**
+**打印效果**:
 
-| 字段名     | 类型   | 必填 | 说明                     | 示例                                     |
-| ---------- | ------ | ---- | ------------------------ | ---------------------------------------- |
-| text       | string | 是   | 文本内容                 | "Product-ABC123-2024"                    |
-| qr_content | string | 是   | 二维码内容（URL 或文本） | "https://www.example.com/product/ABC123" |
+```
+┌─────────────────────┐
+│   第一行文本内容     │
+├─────────────────────┤
+│   第二行文本内容     │
+└─────────────────────┘
+```
 
-**请求示例**
+**请求体**
 
 ```json
 {
-  "type": 2,
+  "template": "double-text",
+  "print_list": [
+    { "text1": "物料A-盖子" },
+    { "text2": "物料B-底座" },
+    { "text1": "物料C-配件" }
+  ]
+}
+```
+
+**参数说明**
+
+| 字段               | 类型   | 必填 | 说明                               |
+| ------------------ | ------ | ---- | ---------------------------------- |
+| template           | string | 是   | 固定为 "double-text"               |
+| print_list         | array  | 是   | 打印数据列表                       |
+| print_list[].text1 | string | 是   | 第一行文本                         |
+| print_list[].text2 | string | 否   | 第二行文本（最后一张可能只有一行） |
+
+**注意事项**:
+
+- 系统会自动将连续两条数据打印在同一张纸的上下两行
+- 如果数据数量为奇数，最后一张纸只打印一行
+
+**响应**
+
+```json
+{
+  "status": "ok",
+  "message": "双行文本打印成功：3个标签（共2张纸）"
+}
+```
+
+**Python 示例**
+
+```python
+import requests
+
+response = requests.post("http://localhost:8000/print", json={
+    "template": "double-text",
+    "print_list": [
+        {"text1": "物料A-盖子"},
+        {"text2": "物料B-底座"},
+        {"text1": "物料C-配件"}
+    ]
+})
+print(response.json())
+# 输出: "双行文本打印成功：3个标签（共2张纸）"
+```
+
+---
+
+### 3. qrcode-with-text - 二维码+文本
+
+**用途**: 二维码在上，文本在下，整体居中
+
+**打印效果**:
+
+```
+┌─────────────────────┐
+│    ████████████     │
+│    ██ QR CODE ██    │
+│    ████████████     │
+│                     │
+│   产品编号: 12345    │
+└─────────────────────┘
+```
+
+**请求体**
+
+```json
+{
+  "template": "qrcode-with-text",
   "print_list": [
     {
-      "text": "Product-ABC123-2024",
-      "qr_content": "https://www.example.com/product/ABC123"
+      "qrcode": "https://example.com/product/12345",
+      "text": "产品编号: 12345"
     },
     {
-      "text": "Product-DEF456-2024",
-      "qr_content": "https://www.example.com/product/DEF456"
+      "qrcode": "https://example.com/product/67890",
+      "text": "产品编号: 67890"
     }
   ]
 }
 ```
 
-**打印说明**：
+**参数说明**
 
-- 每个二维码+文本独占一张纸
-- 上述 2 个对象会打印 2 张纸
-- **固定参数**：
-  - 纸张尺寸: 100mm × 80mm
-  - 字体: 宋体 48 点
-  - 二维码大小: 10 (单元宽度，最大值)
-  - 二维码与文本间距: 24 dots (约 2mm)
-  - 边距: 10 dots (约 0.85mm)
-  - 布局: 二维码和文本中心对齐，整体在纸张居中
+| 字段                | 类型   | 必填 | 说明                      |
+| ------------------- | ------ | ---- | ------------------------- |
+| template            | string | 是   | 固定为 "qrcode-with-text" |
+| print_list          | array  | 是   | 打印数据列表              |
+| print_list[].qrcode | string | 是   | 二维码内容（URL 或文本）  |
+| print_list[].text   | string | 是   | 下方显示的文本            |
 
-**成功响应**
+**响应**
 
 ```json
 {
   "status": "ok",
-  "message": "二维码批量打印成功：2张标签"
+  "message": "二维码标签打印成功：2张"
 }
 ```
 
-**失败响应**
-
-- **状态码**: 400 (Bad Request) - 参数错误
-
-```json
-{
-  "detail": "print_list参数不能为空"
-}
-```
-
-```json
-{
-  "detail": "type=2时，print_list中第1个对象的qr_content不能为空"
-}
-```
-
----
-
-## 错误码说明
-
-| HTTP 状态码 | 说明       | 可能原因                                    |
-| ----------- | ---------- | ------------------------------------------- |
-| 200         | 成功       | 请求处理成功                                |
-| 400         | 请求错误   | type 参数错误、必需参数缺失、参数验证失败等 |
-| 500         | 服务器错误 | 打印机 USB 连接失败、打印命令执行失败等     |
-
----
-
-## 使用示例
-
-### Python 示例
+**Python 示例**
 
 ```python
 import requests
 
-# 服务地址
-BASE_URL = "http://localhost:8000"
-
-# 1. 健康检查
-response = requests.get(f"{BASE_URL}/health")
-print(response.json())
-
-# 2. 批量纯文本打印（type=1）
-response = requests.post(f"{BASE_URL}/print", json={
-    "type": 1,
-    "print_list": [
-        {"text": "cc测试拆箱物料1_盖子_1_1"},
-        {"text": "cc测试拆箱物料2_底座_1_2"},
-        {"text": "cc测试拆箱物料3_配件_1_3"}
-    ]
-})
-print(response.json())
-# 输出: {"status": "ok", "message": "批量打印成功：3个标签（共2张纸）"}
-
-# 3. 批量二维码+文本打印（type=2）
-response = requests.post(f"{BASE_URL}/print", json={
-    "type": 2,
+response = requests.post("http://localhost:8000/print", json={
+    "template": "qrcode-with-text",
     "print_list": [
         {
-            "text": "Product-ABC123-2024",
-            "qr_content": "https://www.example.com/product/ABC123"
-        },
-        {
-            "text": "Product-DEF456-2024",
-            "qr_content": "https://www.example.com/product/DEF456"
+            "qrcode": "https://example.com/product/12345",
+            "text": "产品编号: 12345"
         }
     ]
 })
-print(response.json())
-# 输出: {"status": "ok", "message": "二维码批量打印成功：2张标签"}
 ```
 
-### cURL 示例
+**JavaScript 示例**
 
-```bash
-# 1. 健康检查
-curl http://localhost:8000/health
+```javascript
+const axios = require("axios");
 
-# 2. 批量纯文本打印（type=1）
-curl -X POST http://localhost:8000/print \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": 1,
-    "print_list": [
-      {"text": "cc测试拆箱物料1_盖子_1_1"},
-      {"text": "cc测试拆箱物料2_底座_1_2"}
-    ]
-  }'
-
-# 3. 批量二维码+文本打印（type=2）
-curl -X POST http://localhost:8000/print \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": 2,
-    "print_list": [
+async function printQRCode() {
+  const response = await axios.post("http://localhost:8000/print", {
+    template: "qrcode-with-text",
+    print_list: [
       {
-        "text": "Product-ABC123-2024",
-        "qr_content": "https://www.example.com/product/ABC123"
+        qrcode: "https://example.com/product/12345",
+        text: "产品编号: 12345",
+      },
+    ],
+  });
+  console.log(response.data);
+}
+```
+
+---
+
+### 4. barcode-with-text - 条形码+文本
+
+**用途**: 条形码在上，文本在下，整体居中
+
+**打印效果**:
+
+```
+┌─────────────────────┐
+│   ║║ ║║ ║║ ║║ ║║   │
+│   ║║ ║║ ║║ ║║ ║║   │
+│                     │
+│  订单号: 1234567890  │
+└─────────────────────┘
+```
+
+**请求体**
+
+```json
+{
+  "template": "barcode-with-text",
+  "print_list": [
+    {
+      "barcode": "1234567890",
+      "text": "订单号: 1234567890"
+    },
+    {
+      "barcode": "9876543210",
+      "text": "订单号: 9876543210"
+    }
+  ]
+}
+```
+
+**参数说明**
+
+| 字段                 | 类型   | 必填 | 说明                       |
+| -------------------- | ------ | ---- | -------------------------- |
+| template             | string | 是   | 固定为 "barcode-with-text" |
+| print_list           | array  | 是   | 打印数据列表               |
+| print_list[].barcode | string | 是   | 条形码内容（数字或字母）   |
+| print_list[].text    | string | 是   | 下方显示的文本             |
+
+**响应**
+
+```json
+{
+  "status": "ok",
+  "message": "条形码标签打印成功：2张"
+}
+```
+
+**Python 示例**
+
+```python
+import requests
+
+response = requests.post("http://localhost:8000/print", json={
+    "template": "barcode-with-text",
+    "print_list": [
+        {
+            "barcode": "1234567890",
+            "text": "订单号: 1234567890"
+        }
+    ]
+})
+```
+
+---
+
+### 5. custom - 完全自定义
+
+**用途**: 高级用户完全控制布局和元素位置
+
+**请求体**
+
+```json
+{
+  "template": "custom",
+  "layout": {
+    "width": 100,
+    "height": 80,
+    "elements": [
+      {
+        "type": "text",
+        "x": 100,
+        "y": 100,
+        "text": "自定义标题",
+        "font_size": 56,
+        "font_name": "宋体"
       },
       {
-        "text": "Product-DEF456-2024",
-        "qr_content": "https://www.example.com/product/DEF456"
+        "type": "qrcode",
+        "x": 300,
+        "y": 300,
+        "content": "https://example.com",
+        "size": 10
+      },
+      {
+        "type": "barcode",
+        "x": 100,
+        "y": 700,
+        "content": "123456789",
+        "height": 80,
+        "barcode_type": "128"
       }
     ]
-  }'
+  },
+  "qty": 1
+}
+```
+
+**参数说明**
+
+| 字段            | 类型   | 必填 | 说明                   |
+| --------------- | ------ | ---- | ---------------------- |
+| template        | string | 是   | 固定为 "custom"        |
+| layout          | object | 是   | 自定义布局对象         |
+| layout.width    | number | 否   | 标签宽度(mm)，默认 100 |
+| layout.height   | number | 否   | 标签高度(mm)，默认 80  |
+| layout.elements | array  | 是   | 元素列表               |
+| qty             | number | 否   | 打印数量，默认 1       |
+
+**元素类型**
+
+#### 文本元素
+
+```json
+{
+  "type": "text",
+  "x": 100, // X坐标 (dots)，必填
+  "y": 100, // Y坐标 (dots)，必填
+  "text": "文本内容", // 文本，必填
+  "font_size": 48, // 字体大小 (12-120)，默认48
+  "font_name": "宋体" // 字体名称，默认"宋体"
+}
+```
+
+#### 二维码元素
+
+```json
+{
+  "type": "qrcode",
+  "x": 200, // X坐标 (dots)，必填
+  "y": 200, // Y坐标 (dots)，必填
+  "content": "二维码内容", // 内容，必填
+  "size": 10 // 单元宽度 (1-10)，默认10
+}
+```
+
+#### 条形码元素
+
+```json
+{
+  "type": "barcode",
+  "x": 100, // X坐标 (dots)，必填
+  "y": 400, // Y坐标 (dots)，必填
+  "content": "123456789", // 内容，必填
+  "height": 80, // 高度 (30-300)，默认80
+  "barcode_type": "128" // 类型，默认"128"
+}
+```
+
+**坐标系统**
+
+- 原点 (0, 0) 在左上角
+- 单位: dots（点）
+- 转换公式: `dots = mm × 11.81` (300 DPI)
+- 示例: 100mm = 1181 dots
+
+**响应**
+
+```json
+{
+  "status": "ok",
+  "message": "自定义布局打印成功：1张"
+}
+```
+
+**Python 示例**
+
+```python
+import requests
+
+response = requests.post("http://localhost:8000/print", json={
+    "template": "custom",
+    "layout": {
+        "width": 100,
+        "height": 80,
+        "elements": [
+            {
+                "type": "text",
+                "x": 100,
+                "y": 100,
+                "text": "库存盘点标签",
+                "font_size": 56,
+                "font_name": "宋体"
+            },
+            {
+                "type": "qrcode",
+                "x": 300,
+                "y": 300,
+                "content": "https://example.com/inventory/A12345",
+                "size": 10
+            },
+            {
+                "type": "text",
+                "x": 200,
+                "y": 650,
+                "text": "编号: A12345",
+                "font_size": 40
+            }
+        ]
+    },
+    "qty": 5  # 打印5张
+})
+```
+
+---
+
+## 错误处理
+
+### HTTP 状态码
+
+| 状态码 | 说明       | 场景                           |
+| ------ | ---------- | ------------------------------ |
+| 200    | 成功       | 打印任务完成                   |
+| 400    | 请求错误   | 参数缺失、格式错误、模板不支持 |
+| 500    | 服务器错误 | 打印命令执行失败、打印机异常   |
+| 503    | 服务不可用 | USB 打印机连接失败             |
+
+### 错误响应格式
+
+```json
+{
+  "detail": "错误描述信息"
+}
+```
+
+### 常见错误
+
+#### 1. print_list 不能为空
+
+```json
+{
+  "detail": "print_list不能为空"
+}
+```
+
+**原因**: 预设模板需要提供 print_list 参数
+
+**解决**: 确保 print_list 是非空数组
+
+---
+
+#### 2. 不支持的模板类型
+
+```json
+{
+  "detail": "不支持的模板类型: xxx"
+}
+```
+
+**原因**: template 参数值不在支持列表中
+
+**解决**: 使用以下之一: single-text, double-text, qrcode-with-text, barcode-with-text, custom
+
+---
+
+#### 3. custom 模板需要提供 layout 参数
+
+```json
+{
+  "detail": "custom模板需要提供layout参数"
+}
+```
+
+**原因**: 使用 custom 模板但未提供 layout 对象
+
+**解决**: 添加 layout 参数并包含 elements 数组
+
+---
+
+#### 4. USB 打印机连接失败
+
+```json
+{
+  "detail": "USB打印机连接失败"
+}
+```
+
+**原因**: 打印机未连接或驱动异常
+
+**解决**:
+
+- 检查打印机 USB 连接
+- 确认打印机电源已开启
+- 查看设备管理器是否识别打印机
+
+---
+
+## 代码示例
+
+### Python 完整示例
+
+```python
+import requests
+
+BASE_URL = "http://localhost:8000"
+
+# 1. 健康检查
+health = requests.get(f"{BASE_URL}/health")
+print(health.json())
+
+# 2. 测试打印机连接
+test = requests.post(f"{BASE_URL}/test")
+print(test.json())
+
+# 3. 单行文本打印
+single = requests.post(f"{BASE_URL}/print", json={
+    "template": "single-text",
+    "print_list": [
+        {"text": "物料编号: A12345"}
+    ]
+})
+print(single.json())
+
+# 4. 双行文本打印
+double = requests.post(f"{BASE_URL}/print", json={
+    "template": "double-text",
+    "print_list": [
+        {"text1": "第一行"},
+        {"text2": "第二行"}
+    ]
+})
+print(double.json())
+
+# 5. 二维码打印
+qrcode = requests.post(f"{BASE_URL}/print", json={
+    "template": "qrcode-with-text",
+    "print_list": [
+        {
+            "qrcode": "https://example.com",
+            "text": "扫码查看"
+        }
+    ]
+})
+print(qrcode.json())
+
+# 6. 条形码打印
+barcode = requests.post(f"{BASE_URL}/print", json={
+    "template": "barcode-with-text",
+    "print_list": [
+        {
+            "barcode": "1234567890",
+            "text": "订单号: 1234567890"
+        }
+    ]
+})
+print(barcode.json())
+
+# 7. 自定义布局打印
+custom = requests.post(f"{BASE_URL}/print", json={
+    "template": "custom",
+    "layout": {
+        "elements": [
+            {
+                "type": "text",
+                "x": 100,
+                "y": 100,
+                "text": "标题",
+                "font_size": 56
+            },
+            {
+                "type": "qrcode",
+                "x": 300,
+                "y": 300,
+                "content": "https://example.com",
+                "size": 10
+            }
+        ]
+    },
+    "qty": 1
+})
+print(custom.json())
 ```
 
 ### JavaScript/Node.js 示例
@@ -322,82 +741,68 @@ const axios = require("axios");
 
 const BASE_URL = "http://localhost:8000";
 
-// 批量纯文本打印（type=1）
-async function batchTextPrint() {
+async function printExamples() {
   try {
-    const response = await axios.post(`${BASE_URL}/print`, {
-      type: 1,
+    // 1. 单行文本
+    const single = await axios.post(`${BASE_URL}/print`, {
+      template: "single-text",
+      print_list: [{ text: "物料编号: A12345" }],
+    });
+    console.log(single.data);
+
+    // 2. 二维码
+    const qrcode = await axios.post(`${BASE_URL}/print`, {
+      template: "qrcode-with-text",
       print_list: [
-        { text: "cc测试拆箱物料1_盖子_1_1" },
-        { text: "cc测试拆箱物料2_底座_1_2" },
-        { text: "cc测试拆箱物料3_配件_1_3" },
+        {
+          qrcode: "https://example.com",
+          text: "扫码查看",
+        },
       ],
     });
-    console.log(response.data);
+    console.log(qrcode.data);
+
+    // 3. 自定义布局
+    const custom = await axios.post(`${BASE_URL}/print`, {
+      template: "custom",
+      layout: {
+        elements: [
+          {
+            type: "text",
+            x: 100,
+            y: 100,
+            text: "标题",
+            font_size: 56,
+          },
+          {
+            type: "qrcode",
+            x: 300,
+            y: 300,
+            content: "https://example.com",
+            size: 10,
+          },
+        ],
+      },
+      qty: 1,
+    });
+    console.log(custom.data);
   } catch (error) {
     console.error("打印失败:", error.response?.data);
   }
 }
 
-// 批量二维码+文本打印（type=2）
-async function batchQrcodePrint() {
-  try {
-    const response = await axios.post(`${BASE_URL}/print`, {
-      type: 2,
-      print_list: [
-        {
-          text: "Product-ABC123-2024",
-          qr_content: "https://www.example.com/product/ABC123",
-        },
-        {
-          text: "Product-DEF456-2024",
-          qr_content: "https://www.example.com/product/DEF456",
-        },
-      ],
-    });
-    console.log(response.data);
-  } catch (error) {
-    console.error("打印失败:", error.response?.data);
-  }
-}
-
-batchTextPrint();
-batchQrcodePrint();
+printExamples();
 ```
-
----
-
-## 注意事项
-
-1. **连接方式**: 使用 USB 连接打印机，不需要配置网络 IP 地址
-
-2. **打印机型号**: TTE-344 (300 DPI)
-
-3. **纸张规格**: 10cm × 8cm (100mm × 80mm)
-
-4. **中文支持**: 使用 Windows 系统字体（宋体）打印中文
-
-5. **固定参数**: 所有打印参数已根据 type 固定，用户无需传递
-
-   - type=1: width=100mm, height=80mm
-   - type=2: width=100mm, height=80mm, qr_size=10
-
-6. **type=1 批量打印**: 自动将文本列表分组，每两个文本打印在一张纸的上下两行
-
-7. **type=2 批量打印**: 每个二维码+文本独占一张纸，适合需要单独撕下的场景
-
-8. **参数结构**: 统一使用 `print_list` 数组，每个元素都是对象，包含 `text` 字段（type=2 还需要 `qr_content` 字段）
-
-9. **跨域访问（CORS）**:
-   - 已启用 CORS 中间件，允许所有源（`*`）访问
-   - 生产环境建议在 `main.py` 中修改 `allow_origins` 为具体的前端域名
-   - 示例：`allow_origins=["https://yourdomain.com", "http://localhost:3000"]`
 
 ---
 
 ## 技术支持
 
-如有问题，请查看：
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **GitHub Issues**: [提交问题](https://github.com/你的用户名/TSC-Print-Middleware/issues)
+- **讨论区**: [参与讨论](https://github.com/你的用户名/TSC-Print-Middleware/discussions)
 
-- Swagger API 文档: http://localhost:8000/docs
-- ReDoc 文档: http://localhost:8000/redoc
+---
+
+**💡 提示**: 建议先使用 Swagger UI (http://localhost:8000/docs) 进行接口测试，它提供了交互式的 API 文档和测试功能。
