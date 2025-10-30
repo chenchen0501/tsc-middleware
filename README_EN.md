@@ -11,6 +11,12 @@ English | [简体中文](README.md)
 
 ---
 
+TSC-Print-Middleware is a **zero-driver USB printing middleware** for **TSC thermal label printers**. Built with **Python** and **FastAPI**, it provides a **RESTful API** for **template-based label printing** including **text**, **barcodes**, and **QR codes**. No driver installation required - direct **USB communication**. Perfect for **warehouse management**, **inventory systems**, **logistics automation**, and **asset labeling** on **Windows** platforms.
+
+**Tech Stack**: Python 3.10+ | FastAPI 0.120 | USB Communication | TSPL Protocol | Template Engine
+
+---
+
 ## ✨ Features
 
 - 🚀 **Zero-Driver** - No driver installation required, direct USB communication
