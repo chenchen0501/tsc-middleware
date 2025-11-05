@@ -8,7 +8,8 @@ from config import (
     DEFAULT_WIDTH, DEFAULT_HEIGHT, DPI_RATIO,
     PRINT_MARGIN,
     TYPE1_FONT_HEIGHT, TYPE1_FONT_NAME,
-    TYPE2_FONT_HEIGHT, TYPE2_FONT_NAME, TYPE2_QR_SIZE, TYPE2_QR_SPACING
+    TYPE2_FONT_HEIGHT, TYPE2_FONT_NAME, TYPE2_QR_SIZE, TYPE2_QR_SPACING,
+    TYPE3_FONT_HEIGHT, TYPE3_FONT_NAME, TYPE3_QR_SIZE, TYPE3_QR_TEXT_SPACING
 )
 
 # 配置日志
@@ -360,6 +361,159 @@ def print_type2(
         p.send_command(f"PRINT {qty},1")
         
     finally:
+        p.close_port()
+
+
+def print_type3(
+    data_list: list[str] = None,
+    width: str = None,
+    height: str = None
+):
+    """
+    Type 3: 6格批量二维码+文本打印（每张纸分6个格子）
+    
+    打印方式：
+    - 每张纸分成6个格子（3行 × 2列）
+    - 每个格子左侧二维码，右侧文本
+    - 二维码内容与文本内容一致
+    - 自动分组：每6个数据打印一张纸
+    - 如果数据不足6个，最后一张纸只打印实际数量
+    
+    纸张分割：
+    - 原始纸张：100mm × 80mm
+    - 横向2刀（3行）、纵向1刀（2列）
+    - 每个格子尺寸：50mm × 26.67mm
+    - 格子排列顺序：从左到右，从上到下
+      (格子0) (格子1)
+      (格子2) (格子3)
+      (格子4) (格子5)
+    
+    固定参数：
+    - width: 100mm (10cm)
+    - height: 80mm (8cm)
+    - qr_size: 5（二维码大小，适配小格子）
+    - 字体：宋体，28点（适配小格子）
+    
+    Args:
+        data_list: 要打印的数据列表，如 ["ABC123", "DEF456", ...]
+                   二维码内容和显示文本均使用该值
+        width: 标签宽度(mm)，默认100mm（一般不需要修改）
+        height: 标签高度(mm)，默认80mm（一般不需要修改）
+    
+    示例：
+        print_type3(["A001", "A002", "A003", "A004", "A005", "A006", "A007"])
+        # 输出: 打印2张纸，第1张有6个格子，第2张有1个格子
+    """
+    if data_list is None:
+        data_list = []
+    
+    # 使用配置文件中的默认值
+    if width is None:
+        width = DEFAULT_WIDTH
+    if height is None:
+        height = DEFAULT_HEIGHT
+    
+    p = TSCPrinter()
+    try:
+        # 打开USB端口（参数0表示第一个USB打印机）
+        logging.info("使用 USB 连接打印机...")
+        p.open_port(0)
+        
+        # 计算打印区域尺寸
+        width_dots = int(float(width) * DPI_RATIO)
+        height_dots = int(float(height) * DPI_RATIO)
+        
+        # 有效打印区域（使用统一的边距配置）
+        margin = PRINT_MARGIN
+        effective_width = width_dots - 2 * margin
+        effective_height = height_dots - 2 * margin
+        
+        # 每个格子的尺寸
+        cell_width = effective_width // 2  # 2列
+        cell_height = effective_height // 3  # 3行
+        
+        # Type 3 配置参数
+        font_height = TYPE3_FONT_HEIGHT
+        qr_size = TYPE3_QR_SIZE
+        qr_text_spacing = TYPE3_QR_TEXT_SPACING
+        
+        # 估算二维码尺寸（二维码通常是30-35个模块）
+        qr_modules = 33  # 中等复杂度二维码的模块数
+        qr_pixel_size = qr_size * qr_modules
+        
+        # 每6个数据为一组，打印在一张纸上
+        for page_idx in range(0, len(data_list), 6):
+            # 初始化打印机设置
+            _init_printer_settings(p, width, height)
+            
+            # 当前页的数据（最多6个）
+            page_data = data_list[page_idx:page_idx + 6]
+            
+            # 遍历当前页的每个数据
+            for cell_idx, data in enumerate(page_data):
+                # 计算格子位置（从左到右，从上到下）
+                col = cell_idx % 2  # 列索引：0 或 1
+                row = cell_idx // 2  # 行索引：0, 1, 或 2
+                
+                # 格子左上角坐标
+                cell_start_x = margin + col * cell_width
+                cell_start_y = margin + row * cell_height
+                
+                # 格子内部可用区域（预留小边距）
+                cell_margin = 5
+                cell_content_width = cell_width - 2 * cell_margin
+                cell_content_height = cell_height - 2 * cell_margin
+                
+                # 计算二维码和文本的水平布局
+                # 二维码在左，文本在右
+                
+                # 估算文本宽度
+                text_width = _estimate_text_width(data, font_height)
+                
+                # 计算总宽度（二维码 + 间距 + 文本）
+                total_width = qr_pixel_size + qr_text_spacing + text_width
+                
+                # 计算起始X坐标（水平居中）
+                if total_width <= cell_content_width:
+                    start_x = cell_start_x + cell_margin + (cell_content_width - total_width) // 2
+                else:
+                    # 如果内容太宽，左对齐
+                    start_x = cell_start_x + cell_margin
+                
+                # 计算二维码Y坐标（垂直居中）
+                # 使用二维码和文本中较高的那个来计算垂直居中
+                content_height = max(qr_pixel_size, font_height)
+                start_y = cell_start_y + cell_margin + (cell_content_height - content_height) // 2
+                
+                # 二维码坐标
+                qr_x = start_x
+                qr_y = start_y
+                
+                # 打印二维码
+                p.send_command(f'QRCODE {qr_x},{qr_y},H,{qr_size},A,0,M2,"{data}"')
+                
+                # 文本坐标（在二维码右侧）
+                text_x = qr_x + qr_pixel_size + qr_text_spacing
+                # 文本垂直居中对齐二维码
+                text_y = qr_y + (qr_pixel_size - font_height) // 2
+                
+                # 打印文本
+                p.print_text_windows_font(
+                    x=text_x,
+                    y=text_y,
+                    font_height=font_height,
+                    rotation=0,
+                    font_style=0,
+                    font_underline=0,
+                    font_face_name=TYPE3_FONT_NAME,
+                    text=data
+                )
+            
+            # 执行打印一张
+            p.send_command("PRINT 1,1")
+            
+    finally:
+        # 确保关闭端口
         p.close_port()
 
 

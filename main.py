@@ -6,10 +6,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
-from printer import print_type1, print_type2
+from printer import print_type1, print_type2, print_type3
 from config import (
     DEFAULT_WIDTH, DEFAULT_HEIGHT,
-    TYPE1_FONT_HEIGHT, TYPE2_FONT_HEIGHT, TYPE2_QR_SIZE, TYPE2_QR_SPACING
+    TYPE1_FONT_HEIGHT, TYPE2_FONT_HEIGHT, TYPE2_QR_SIZE, TYPE2_QR_SPACING,
+    TYPE3_FONT_HEIGHT, TYPE3_QR_SIZE, TYPE3_QR_TEXT_SPACING
 )
 
 app = FastAPI(
@@ -34,6 +35,7 @@ class PrintItem(BaseModel):
     
     - type=1（纯文本）只需要 text 字段
     - type=2（二维码+文本）需要 text 和 qr_content 字段
+    - type=3（6格二维码+文本）只需要 text 字段（二维码内容与文本一致）
     """
     text: str = Field(..., description="文本内容", json_schema_extra={"example": "产品名称"})
     qr_content: Optional[str] = Field(None, description="二维码内容（仅type=2需要）", json_schema_extra={"example": "https://www.example.com/product/123"})
@@ -46,10 +48,11 @@ class UnifiedPrintJob(BaseModel):
     支持的打印类型（type）：
     - 1: 批量纯文本打印，每张纸上下两行打印两个标签
     - 2: 批量二维码+文本打印，每个二维码独占一张纸
+    - 3: 6格批量二维码+文本打印，每张纸分6个格子（3行×2列）
     
     所有打印参数（width、height、qr_size等）根据type固定，用户无需传递
     """
-    type: int = Field(..., description="打印类型: 1=纯文本批量打印（每张纸两个）, 2=二维码+文本批量打印（每个独占一张）", json_schema_extra={"example": 1})
+    type: int = Field(..., description="打印类型: 1=纯文本批量打印（每张纸两个）, 2=二维码+文本批量打印（每个独占一张）, 3=6格批量打印（每张纸6个）", json_schema_extra={"example": 1})
     print_list: list[PrintItem] = Field(..., description="打印项列表", json_schema_extra={"example": [{"text": "物料1"}, {"text": "物料2"}]})
 
 
@@ -98,6 +101,19 @@ def api_print(job: UnifiedPrintJob):
         * 二维码与文本间距: 24 dots (约2mm)
         * 边距: 10 dots (约0.85mm)
         * 布局: 二维码和文本中心对齐，整体居中
+    
+    **type = 3: 6格批量二维码+文本打印**
+    - 每张纸分成6个格子（3行×2列），每个格子左侧二维码+右侧文本
+    - 二维码内容与文本内容一致，print_list中每个对象只需要 text 字段
+    - 示例: 传入10个文本，会打印2张纸（第1张有6个格子，第2张有4个格子）
+    - 固定参数:
+        * 纸张尺寸: 100mm × 80mm
+        * 每个格子尺寸: 50mm × 26.67mm
+        * 字体: 宋体 28点（适配小格子）
+        * 二维码大小: 5 (单元宽度，适配小格子)
+        * 二维码与文本间距: 10 dots (约1mm)
+        * 边距: 10 dots (约0.85mm)
+        * 布局: 每个格子内二维码左侧，文本右侧，居中对齐
     """
     try:
         # 验证print_list不为空
@@ -153,11 +169,31 @@ def api_print(job: UnifiedPrintJob):
                 "message": f"二维码批量打印成功：{len(job.print_list)}张标签"
             }
         
+        # type = 3: 6格批量二维码+文本打印，每张纸6个格子
+        elif job.type == 3:
+            # 提取文本列表（二维码内容与文本一致）
+            data_list = [item.text for item in job.print_list]
+            
+            # 调用 Type 3 打印服务（固定参数）
+            print_type3(
+                data_list=data_list,
+                width=DEFAULT_WIDTH,
+                height=DEFAULT_HEIGHT
+            )
+            
+            # 计算打印张数（每张纸6个格子）
+            sheets = (len(data_list) + 5) // 6
+            
+            return {
+                "status": "ok",
+                "message": f"6格批量打印成功：{len(data_list)}个标签（共{sheets}张纸）"
+            }
+        
         # 不支持的type
         else:
             raise HTTPException(
                 status_code=400,
-                detail=f"不支持的打印类型: type={job.type}，目前仅支持 1（纯文本批量） 和 2（二维码批量）"
+                detail=f"不支持的打印类型: type={job.type}，目前支持 1（纯文本批量）, 2（二维码批量）, 3（6格批量）"
             )
     
     except HTTPException:

@@ -27,5 +27,11 @@ TYPE2_FONT_NAME = "宋体"  # 字体名称
 TYPE2_QR_SIZE = 12  # 二维码单元宽度 (1-10)，10为最大
 TYPE2_QR_SPACING = 24  # 二维码与文本间距 (dots)，约2mm
 
+# Type 3 参数（6格二维码+文本打印，每格左侧二维码+右侧文本）
+TYPE3_FONT_HEIGHT = 28  # 字体高度 (dots)，适配小格子
+TYPE3_FONT_NAME = "宋体"  # 字体名称
+TYPE3_QR_SIZE = 5  # 二维码单元宽度 (1-10)，适配小格子
+TYPE3_QR_TEXT_SPACING = 10  # 二维码与文本间距 (dots)，约1mm
+
 # 注意：已改为USB连接模式，无需配置IP地址
 

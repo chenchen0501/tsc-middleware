@@ -4,7 +4,7 @@ TSC打印机测试脚本 - 支持中文打印
 """
 import sys
 import os
-from printer import print_label, print_type1, print_type2, print_calibration_border, calibrate_paper
+from printer import print_label, print_type1, print_type2, print_type3, print_calibration_border, calibrate_paper
 
 # Windows编码设置 - 修复中文乱码
 if sys.platform == 'win32':
@@ -58,6 +58,20 @@ PRINT_CONFIGS = [
                     "text": "sn：ODR2025102900030018001",
                     "qr_content": "ODR2025102900030018001"
                 }
+            ]
+        }
+    },
+    {
+        "name": "Type 3 - 6格批量二维码+文本（每张纸6个格子）",
+        "data": {
+            "type": 3,
+            "print_list": [
+                {"text": "GG2025111100001"},
+                {"text": "GG2025111100002"},
+                {"text": "GG2025111100003"},
+                {"text": "GG2025111100004"},
+                {"text": "GG2025111100005"},
+                {"text": "GG2025111100006"}
             ]
         }
     },
@@ -125,6 +139,31 @@ def run_test(config):
         except Exception as e:
             print(f"❌ [失败] {e}")
             return False
+    
+    elif 'data' in config and config['data'].get('type') == 3:
+        # Type 3: 6格批量二维码+文本打印（每张纸6个格子）
+        data = config['data']
+        data_list = [item['text'] for item in data['print_list']]
+        
+        print(f"打印模式: Type 3 - 6格批量二维码+文本打印")
+        print(f"API 请求数据: {data}")
+        print(f"标签列表:")
+        for i, text in enumerate(data_list, 1):
+            print(f"  {i}. {text}")
+        print(f"标签数量: {len(data_list)} 个")
+        print(f"打印张数: {(len(data_list) + 5) // 6} 张")
+        print(f"固定参数: 纸张=100mm×80mm, 每格=50mm×26.67mm, 字体=宋体28点, 二维码大小=5")
+        print(f"布局说明: 每张纸6个格子（3行×2列），每格左侧二维码+右侧文本")
+        print()
+        
+        try:
+            print_type3(data_list=data_list)
+            print("✅ [成功] Type 3 6格批量打印命令已发送到USB打印机")
+            return True
+        except Exception as e:
+            print(f"❌ [失败] {e}")
+            return False
+    
     elif config.get('type') == 'calibration':
         # 打印区域校准测试
         print(f"打印模式: 打印区域校准")
