@@ -10,7 +10,8 @@ from config import (
     TYPE1_FONT_HEIGHT, TYPE1_FONT_NAME,
     TYPE2_FONT_HEIGHT, TYPE2_FONT_NAME, TYPE2_QR_SIZE, TYPE2_QR_SPACING,
     TYPE3_FONT_HEIGHT, TYPE3_FONT_NAME, TYPE3_QR_SIZE, TYPE3_QR_TEXT_SPACING,
-    UTF8_FONT_NAME, UTF8_FONT_BASE_HEIGHT, UTF8_FORCE_CHARACTERS
+    UTF8_FONT_NAME, UTF8_FONT_BASE_HEIGHT, UTF8_FORCE_CHARACTERS,
+    CHAR_REPLACEMENT_MAP, USE_UTF8_MODE
 )
 
 # 配置日志
@@ -88,9 +89,17 @@ def _print_text_utf8(printer: TSCPrinter, x: int, y: int, text: str, target_font
 
     escaped_text = _escape_tspl_text(text)
     command = f'TEXT {x},{y},"{UTF8_FONT_NAME}",0,{scale},{scale},"{escaped_text}"'
-    logging.debug(f"使用 UTF-8 模式打印文本: {command}")
+    logging.info(f"使用 UTF-8 模式打印文本: {command}")  # 改为 INFO 方便调试
     printer.send_command_utf8(command)
     return actual_height
+
+
+def _replace_special_chars(text: str) -> str:
+    """使用半角字符替换全角特殊字符。"""
+    result = text
+    for char, replacement in CHAR_REPLACEMENT_MAP.items():
+        result = result.replace(char, replacement)
+    return result
 
 
 def _print_text_with_fallback(
@@ -115,10 +124,21 @@ def _print_text_with_fallback(
     Returns:
         实际打印使用的字体高度（dots）
     """
-    if _requires_utf8(text):
-        logging.info("检测到特殊字符，使用 UTF-8 打印模式")
-        return _print_text_utf8(printer, x, y, text, target_font_height)
+    # 检查是否需要特殊处理
+    needs_special_handling = _requires_utf8(text)
+    
+    if needs_special_handling:
+        if USE_UTF8_MODE:
+            # 方案1: 使用 UTF-8 模式打印
+            logging.info(f"检测到特殊字符 {UTF8_FORCE_CHARACTERS}，使用 UTF-8 打印模式")
+            return _print_text_utf8(printer, x, y, text, target_font_height)
+        else:
+            # 方案2: 替换特殊字符为半角字符
+            replaced_text = _replace_special_chars(text)
+            logging.info(f"检测到特殊字符，已替换: '{text}' → '{replaced_text}'")
+            text = replaced_text
 
+    # 使用 Windows 字体打印
     printer.print_text_windows_font(
         x=x,
         y=y,

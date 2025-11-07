@@ -34,9 +34,19 @@ TYPE3_QR_SIZE = 5  # 二维码单元宽度 (1-10)，适配小格子
 TYPE3_QR_TEXT_SPACING = 10  # 二维码与文本间距 (dots)，约1mm
 
 # UTF-8 Fallback 配置
-UTF8_FONT_NAME = "TSS24.BF2"  # 内置支持中文的字体
+# 可选字体: "TSS24.BF2", "5", "KAIU.TTF", "宋体"
+UTF8_FONT_NAME = "5"  # 内置支持中文的字体（5是TSC内置中文字体编号）
 UTF8_FONT_BASE_HEIGHT = 24  # 字体基础高度 (dots)
 UTF8_FORCE_CHARACTERS = {"【", "】"}  # 需要强制使用 UTF-8 打印的字符
+
+# 字符替换映射（如果 UTF-8 模式不可用，使用此映射替换特殊字符）
+CHAR_REPLACEMENT_MAP = {
+    "【": "[",  # 全角左方括号 → 半角左方括号
+    "】": "]",  # 全角右方括号 → 半角右方括号
+}
+
+# UTF-8 模式开关（如果 UTF-8 打印不工作，可设置为 False 使用字符替换模式）
+USE_UTF8_MODE = True  # 设为 False 则使用字符替换而非 UTF-8 打印
 
 # 注意：已改为USB连接模式，无需配置IP地址
 
