@@ -9,7 +9,8 @@ from config import (
     PRINT_MARGIN,
     TYPE1_FONT_HEIGHT, TYPE1_FONT_NAME,
     TYPE2_FONT_HEIGHT, TYPE2_FONT_NAME, TYPE2_QR_SIZE, TYPE2_QR_SPACING,
-    TYPE3_FONT_HEIGHT, TYPE3_FONT_NAME, TYPE3_QR_SIZE, TYPE3_QR_TEXT_SPACING
+    TYPE3_FONT_HEIGHT, TYPE3_FONT_NAME, TYPE3_QR_SIZE, TYPE3_QR_TEXT_SPACING,
+    UTF8_FONT_NAME, UTF8_FONT_BASE_HEIGHT, UTF8_FORCE_CHARACTERS
 )
 
 # 配置日志
@@ -37,6 +38,98 @@ def _estimate_text_width(text: str, font_height: int) -> int:
             # 英文、数字、符号宽度约为字体高度的 0.6 倍
             width += int(font_height * 0.6)
     return width
+
+
+def _requires_utf8(text: str) -> bool:
+    """判断文本是否需要使用 UTF-8 模式打印。"""
+    return any(char in UTF8_FORCE_CHARACTERS for char in text)
+
+
+def _get_effective_font_height(text: str, target_font_height: int) -> int:
+    """
+    计算文本实际使用的字体高度。
+
+    Args:
+        text: 文本内容
+        target_font_height: 目标字体高度（dots）
+
+    Returns:
+        实际打印使用的字体高度（dots）
+    """
+    if not _requires_utf8(text):
+        return target_font_height
+
+    scale = max(1, round(target_font_height / UTF8_FONT_BASE_HEIGHT))
+    return UTF8_FONT_BASE_HEIGHT * scale
+
+
+def _escape_tspl_text(text: str) -> str:
+    """转义 TSPL 命令中的特殊字符。"""
+    return text.replace("\\", r"\\").replace('"', r'\"')
+
+
+def _print_text_utf8(printer: TSCPrinter, x: int, y: int, text: str, target_font_height: int) -> int:
+    """
+    使用 TSPL UTF-8 命令打印文本。
+
+    Args:
+        printer: TSCPrinter 实例
+        x: X 坐标（dots）
+        y: Y 坐标（dots）
+        text: 文本内容
+        target_font_height: 目标字体高度（dots）
+
+    Returns:
+        实际打印使用的字体高度（dots）
+    """
+    scale = max(1, round(target_font_height / UTF8_FONT_BASE_HEIGHT))
+    scale = min(scale, 10)
+    actual_height = UTF8_FONT_BASE_HEIGHT * scale
+
+    escaped_text = _escape_tspl_text(text)
+    command = f'TEXT {x},{y},"{UTF8_FONT_NAME}",0,{scale},{scale},"{escaped_text}"'
+    logging.debug(f"使用 UTF-8 模式打印文本: {command}")
+    printer.send_command_utf8(command)
+    return actual_height
+
+
+def _print_text_with_fallback(
+    printer: TSCPrinter,
+    x: int,
+    y: int,
+    text: str,
+    target_font_height: int,
+    font_name: str,
+) -> int:
+    """
+    根据文本内容选择合适的打印方式。
+
+    Args:
+        printer: TSCPrinter 实例
+        x: X 坐标（dots）
+        y: Y 坐标（dots）
+        text: 打印文本
+        target_font_height: 目标字体高度（dots）
+        font_name: Windows 字体名称
+
+    Returns:
+        实际打印使用的字体高度（dots）
+    """
+    if _requires_utf8(text):
+        logging.info("检测到特殊字符，使用 UTF-8 打印模式")
+        return _print_text_utf8(printer, x, y, text, target_font_height)
+
+    printer.print_text_windows_font(
+        x=x,
+        y=y,
+        font_height=target_font_height,
+        rotation=0,
+        font_style=0,
+        font_underline=0,
+        font_face_name=font_name,
+        text=text
+    )
+    return target_font_height
 
 
 def _init_printer_settings(printer: TSCPrinter, width: str, height: str):
@@ -80,6 +173,9 @@ def _init_printer_settings(printer: TSCPrinter, width: str, height: str):
     
     # 设置打印停止位置（0 = 打印后不移动纸张）
     printer.send_command("SHIFT 0")
+
+    # 设置编码为 UTF-8，保证特殊字符正常打印
+    printer.send_command("CODEPAGE UTF-8")
     
     logging.info(f"打印机初始化完成: {width}mm x {height}mm")
 
@@ -119,15 +215,13 @@ def print_label(
         _init_printer_settings(p, width, height)
         
         # 打印文本（使用Windows字体支持中文）
-        p.print_text_windows_font(
+        _print_text_with_fallback(
+            printer=p,
             x=50,
             y=200,
-            font_height=56,  # 增大字体
-            rotation=0,
-            font_style=0,
-            font_underline=0,
-            font_face_name="宋体",  # 使用宋体支持中文
-            text=text
+            text=text,
+            target_font_height=56,
+            font_name="宋体"
         )
         
         # 打印条形码（如果提供）
@@ -202,41 +296,39 @@ def print_type1(
             
             # 打印第一行（上半部分居中）
             first_text = text_list[i]
-            text1_width = _estimate_text_width(first_text, font_height)
+            first_text_height = _get_effective_font_height(first_text, font_height)
+            text1_width = _estimate_text_width(first_text, first_text_height)
             
             # 上半部分水平垂直居中
             x1 = margin + (effective_width - text1_width) // 2
-            y1 = margin + (effective_height // 2 - font_height) // 2
-            
-            p.print_text_windows_font(
+            y1 = margin + (effective_height // 2 - first_text_height) // 2
+
+            _print_text_with_fallback(
+                printer=p,
                 x=x1,
                 y=y1,
-                font_height=font_height,
-                rotation=0,
-                font_style=0,
-                font_underline=0,
-                font_face_name=TYPE1_FONT_NAME,
-                text=first_text
+                text=first_text,
+                target_font_height=font_height,
+                font_name=TYPE1_FONT_NAME
             )
             
             # 打印第二行（下半部分居中，如果存在）
             if i + 1 < len(text_list):
                 second_text = text_list[i + 1]
-                text2_width = _estimate_text_width(second_text, font_height)
+                second_text_height = _get_effective_font_height(second_text, font_height)
+                text2_width = _estimate_text_width(second_text, second_text_height)
                 
                 # 下半部分水平垂直居中
                 x2 = margin + (effective_width - text2_width) // 2
-                y2 = margin + effective_height // 2 + (effective_height // 2 - font_height) // 2
-                
-                p.print_text_windows_font(
+                y2 = margin + effective_height // 2 + (effective_height // 2 - second_text_height) // 2
+
+                _print_text_with_fallback(
+                    printer=p,
                     x=x2,
                     y=y2,
-                    font_height=font_height,
-                    rotation=0,
-                    font_style=0,
-                    font_underline=0,
-                    font_face_name=TYPE1_FONT_NAME,
-                    text=second_text
+                    text=second_text,
+                    target_font_height=font_height,
+                    font_name=TYPE1_FONT_NAME
                 )
             
             # 执行打印一张
@@ -320,13 +412,14 @@ def print_type2(
         qr_pixel_size = qr_size * qr_modules
         
         # 估算文本宽度
-        text_width = _estimate_text_width(text, font_height)
+        text_height = _get_effective_font_height(text, font_height)
+        text_width = _estimate_text_width(text, text_height)
         
         # 二维码和文本之间的间距（使用统一的配置）
         spacing = TYPE2_QR_SPACING
         
         # 计算整体高度（二维码 + 间距 + 文本）
-        total_height = qr_pixel_size + spacing + font_height
+        total_height = qr_pixel_size + spacing + text_height
         
         # 计算垂直起始位置（整体垂直居中）
         start_y = margin + (effective_height - total_height) // 2
@@ -344,17 +437,15 @@ def print_type2(
         # 文本水平居中（相对于纸张中心线），位于二维码下方
         text_x = center_x - text_width // 2
         text_y = qr_y + qr_pixel_size + spacing
-        
+
         # 打印文本
-        p.print_text_windows_font(
+        _print_text_with_fallback(
+            printer=p,
             x=text_x,
             y=text_y,
-            font_height=font_height,
-            rotation=0,
-            font_style=0,
-            font_underline=0,
-            font_face_name=TYPE2_FONT_NAME,
-            text=text
+            text=text,
+            target_font_height=font_height,
+            font_name=TYPE2_FONT_NAME
         )
         
         # 执行打印
@@ -468,7 +559,8 @@ def print_type3(
                 # 二维码在左，文本在右
                 
                 # 估算文本宽度
-                text_width = _estimate_text_width(data, font_height)
+                text_height = _get_effective_font_height(data, font_height)
+                text_width = _estimate_text_width(data, text_height)
                 
                 # 计算总宽度（二维码 + 间距 + 文本）
                 total_width = qr_pixel_size + qr_text_spacing + text_width
@@ -482,7 +574,7 @@ def print_type3(
                 
                 # 计算二维码Y坐标（垂直居中）
                 # 使用二维码和文本中较高的那个来计算垂直居中
-                content_height = max(qr_pixel_size, font_height)
+                content_height = max(qr_pixel_size, text_height)
                 start_y = cell_start_y + cell_margin + (cell_content_height - content_height) // 2
                 
                 # 二维码坐标
@@ -495,18 +587,16 @@ def print_type3(
                 # 文本坐标（在二维码右侧）
                 text_x = qr_x + qr_pixel_size + qr_text_spacing
                 # 文本垂直居中对齐二维码
-                text_y = qr_y + (qr_pixel_size - font_height) // 2
-                
+                text_y = qr_y + (qr_pixel_size - text_height) // 2
+
                 # 打印文本
-                p.print_text_windows_font(
+                _print_text_with_fallback(
+                    printer=p,
                     x=text_x,
                     y=text_y,
-                    font_height=font_height,
-                    rotation=0,
-                    font_style=0,
-                    font_underline=0,
-                    font_face_name=TYPE3_FONT_NAME,
-                    text=data
+                    text=data,
+                    target_font_height=font_height,
+                    font_name=TYPE3_FONT_NAME
                 )
             
             # 执行打印一张

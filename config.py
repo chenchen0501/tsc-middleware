@@ -33,5 +33,10 @@ TYPE3_FONT_NAME = "宋体"  # 字体名称
 TYPE3_QR_SIZE = 5  # 二维码单元宽度 (1-10)，适配小格子
 TYPE3_QR_TEXT_SPACING = 10  # 二维码与文本间距 (dots)，约1mm
 
+# UTF-8 Fallback 配置
+UTF8_FONT_NAME = "TSS24.BF2"  # 内置支持中文的字体
+UTF8_FONT_BASE_HEIGHT = 24  # 字体基础高度 (dots)
+UTF8_FORCE_CHARACTERS = {"【", "】"}  # 需要强制使用 UTF-8 打印的字符
+
 # 注意：已改为USB连接模式，无需配置IP地址
 
