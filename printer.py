@@ -57,7 +57,8 @@ def _get_effective_font_height(text: str, target_font_height: int) -> int:
     Returns:
         实际打印使用的字体高度（dots）
     """
-    if not _requires_utf8(text):
+    # 只有在使用 UTF-8 模式且检测到特殊字符时才需要调整字体高度
+    if not USE_UTF8_MODE or not _requires_utf8(text):
         return target_font_height
 
     scale = max(1, round(target_font_height / UTF8_FONT_BASE_HEIGHT))

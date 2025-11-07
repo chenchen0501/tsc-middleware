@@ -46,7 +46,7 @@ CHAR_REPLACEMENT_MAP = {
 }
 
 # UTF-8 模式开关（如果 UTF-8 打印不工作，可设置为 False 使用字符替换模式）
-USE_UTF8_MODE = True  # 设为 False 则使用字符替换而非 UTF-8 打印
+USE_UTF8_MODE = False  # 设为 False 则使用字符替换而非 UTF-8 打印（推荐）
 
 # 注意：已改为USB连接模式，无需配置IP地址
 
